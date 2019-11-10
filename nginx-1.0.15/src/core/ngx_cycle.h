@@ -36,12 +36,12 @@ struct ngx_shm_zone_s {
 
 struct ngx_cycle_s {
     /*
-     * ����������ģ��洢��������Ľṹ��ָ��,��������һ�����飬ÿ�������Ա����һ��ָ��
-     * ���ָ��ָ�������һ���洢��ָ�������
+     * 保存着所有模块存储的配置项的结构体指针,它首先是一个数组，每个数组成员又是一个指针
+     * 这个指针指向的是另一个存储着指针的数组
      */
     void                  ****conf_ctx;
     /*
-     * �ڴ��
+     * 内存池
      */
     ngx_pool_t               *pool;
 
@@ -49,43 +49,43 @@ struct ngx_cycle_s {
     ngx_log_t                 new_log;
 
     ngx_connection_t        **files;
-    /* �������ӳ�,��free_connection_n���ʹ�� */
+    /* 可用连接池,和free_connection_n配合使用 */
     ngx_connection_t         *free_connections;
-    /* �������ӳ��е��������� */
+    /* 可用连接池中的连接总数 */
     ngx_uint_t                free_connection_n;
-    /* ˫����������,Ԫ��������ngx_connection_t�ṹ��,��ʾ���ظ�ʹ�õ����Ӷ��� */
+    /* 双向链表容器,元素类型是ngx_connection_t结构体,表示课重复使用的连接队列 */
     ngx_queue_t               reusable_connections_queue;
-    /* ��̬����,ÿ������Ԫ�ش洢��ngx_listening_t��Ա,��ʾ�����˿��Լ���صĲ��� */
+    /* 动态数组,每个数组元素存储着ngx_listening_t成员,表示监听端口以及相关的参数 */
     ngx_array_t               listening;
-    /* ��̬��������,��������nginx����Ҫ������Ŀ¼,���Ŀ¼������,����ͼ����,������Ŀ¼
-     * ʧ�ܻᵼ��Nginx����ʧ��.�����ϴ��ļ�����ʱĿ¼Ҳ��pathes��,���û��Ȩ�޴���,���
-     * ����Nginx�޷�����.
+    /* 动态数组容器,它保存着nginx所有要操作的目录,如果目录不存在,会试图创建,而创建目录
+     * 失败会导致Nginx启动失败.例如上传文件的临时目录也在pathes中,如果没有权限创建,则会
+     * 导致Nginx无法启动.
      */
     ngx_array_t               pathes;
-    /* ����������,Ԫ������Ϊngx_open_file_t�ṹ��.����ʾNginx�Ѿ��򿪵������ļ�
+    /* 单链表容器,元素类型为ngx_open_file_t结构体.它表示Nginx已经打开的所有文件
      */
     ngx_list_t                open_files;
-    /* ����������,Ԫ������Ϊngx_shm_zone_t�ṹ��,ÿ��Ԫ�ر�ʾһ�鹲���ڴ� */
+    /* 单链表容器,元素类型为ngx_shm_zone_t结构体,每个元素表示一块共享内存 */
     ngx_list_t                shared_memory;
-    /* ��ǰ������,�������ӵ����� */
+    /* 当前进程中,所有连接的总数 */
     ngx_uint_t                connection_n;
     /*  */
     ngx_uint_t                files_n;
-    /* ��ǰ������,���е����Ӷ��� */
+    /* 当前进程中,所有的连接对象 */
     ngx_connection_t         *connections;
     ngx_event_t              *read_events;
     ngx_event_t              *write_events;
 
     ngx_cycle_t              *old_cycle;
-    /* �����ļ�����ڰ�װĿ¼��·������ */
+    /* 配置文件相对于安装目录的路径名称 */
     ngx_str_t                 conf_file;
     ngx_str_t                 conf_param;
-    /* Nginx�����ļ����ڵ�Ŀ¼��·�� */
+    /* Nginx配置文件所在的目录的路径 */
     ngx_str_t                 conf_prefix;
-    /* Nginx��װĿ¼��·�� */
+    /* Nginx安装目录的路径 */
     ngx_str_t                 prefix;
     ngx_str_t                 lock_file;
-    /* ʹ��gethostnameϵͳ���õõ��������� */
+    /* 使用gethostname系统调用得到的主机名 */
     ngx_str_t                 hostname;
 };
 

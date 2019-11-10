@@ -35,8 +35,8 @@ ngx_list_create(ngx_pool_t *pool, ngx_uint_t n, size_t size)
 }
 
 /*
- * ½«Ò»¸öÔªËØ·ÅÈëÁ´±íÖ®ÖÐ
- * ÊÂÊµÉÏ·µ»Ø¿ÉÒÔ²åÈëµÄÄÚ´æµÄÊ×µØÖ·
+ * å°†ä¸€ä¸ªå…ƒç´ æ”¾å…¥é“¾è¡¨ä¹‹ä¸­
+ * äº‹å®žä¸Šè¿”å›žå¯ä»¥æ’å…¥çš„å†…å­˜çš„é¦–åœ°å€
  */
 void *
 ngx_list_push(ngx_list_t *l)
@@ -46,7 +46,7 @@ ngx_list_push(ngx_list_t *l)
 
     last = l->last;
 
-    if (last->nelts == l->nalloc) { /* ÄÚ´æÒÑÂú,ÐèÒªÖØÐÂ·ÖÅäÄÚ´æ */
+    if (last->nelts == l->nalloc) { /* å†…å­˜å·²æ»¡,éœ€è¦é‡æ–°åˆ†é…å†…å­˜ */
 
         /* the last part is full, allocate a new list part */
 
@@ -63,7 +63,7 @@ ngx_list_push(ngx_list_t *l)
         last->nelts = 0;
         last->next = NULL;
 
-        l->last->next = last; /* ¼ÇÂ¼ÏÂÐÂ¼ÓÈëµÄ½Úµãl */
+        l->last->next = last; /* è®°å½•ä¸‹æ–°åŠ å…¥çš„èŠ‚ç‚¹l */
         l->last = last;
     }
 

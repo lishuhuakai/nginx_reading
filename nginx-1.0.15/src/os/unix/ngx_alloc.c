@@ -14,7 +14,7 @@ ngx_uint_t  ngx_pagesize_shift;
 ngx_uint_t  ngx_cacheline_size;
 
 /*
- * ngx_allocÊÂÊµÉÏÊÇ¶ÔmallocµÄ¼òµ¥·â×°
+ * ngx_allocäº‹å®ä¸Šæ˜¯å¯¹mallocçš„ç®€å•å°è£…
  */
 void *
 ngx_alloc(size_t size, ngx_log_t *log)

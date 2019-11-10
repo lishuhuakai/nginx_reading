@@ -32,7 +32,7 @@ char           **ngx_os_argv;
 ngx_int_t        ngx_process_slot;
 ngx_socket_t     ngx_channel;
 ngx_int_t        ngx_last_process;
-/* ¼ÇÂ¼½ø³ÌµÄÏà¹ØĞÅÏ¢ */
+/* è®°å½•è¿›ç¨‹çš„ç›¸å…³ä¿¡æ¯ */
 ngx_process_t    ngx_processes[NGX_MAX_PROCESSES];
 
 
@@ -84,7 +84,7 @@ ngx_signal_t  signals[] = {
 
 
 /*
- * Æô¶¯Ò»¸ö×Ó½ø³Ì
+ * å¯åŠ¨ä¸€ä¸ªå­è¿›ç¨‹
  */
 ngx_pid_t
 ngx_spawn_process(ngx_cycle_t *cycle, ngx_spawn_proc_pt proc, void *data,
@@ -99,7 +99,7 @@ ngx_spawn_process(ngx_cycle_t *cycle, ngx_spawn_proc_pt proc, void *data,
 
     } else {
         for (s = 0; s < ngx_last_process; s++) {
-            if (ngx_processes[s].pid == -1) { /* ÕÒµ½Ò»¸öÎ´Ê¹ÓÃµÄ½á¹¹ */
+            if (ngx_processes[s].pid == -1) { /* æ‰¾åˆ°ä¸€ä¸ªæœªä½¿ç”¨çš„ç»“æ„ */
                 break;
             }
         }
@@ -116,7 +116,7 @@ ngx_spawn_process(ngx_cycle_t *cycle, ngx_spawn_proc_pt proc, void *data,
     if (respawn != NGX_PROCESS_DETACHED) {
 
         /* Solaris 9 still has no AF_LOCAL */
-        /* ´´½¨Ò»¶Ôchannel */
+        /* åˆ›å»ºä¸€å¯¹channel */
         if (socketpair(AF_UNIX, SOCK_STREAM, 0, ngx_processes[s].channel) == -1)
         {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
@@ -185,7 +185,7 @@ ngx_spawn_process(ngx_cycle_t *cycle, ngx_spawn_proc_pt proc, void *data,
 
     ngx_process_slot = s;
 
-    /* Ö±½Óµ÷ÓÃforkº¯Êı */
+    /* ç›´æ¥è°ƒç”¨forkå‡½æ•° */
     pid = fork();
 
     switch (pid) {
@@ -196,9 +196,9 @@ ngx_spawn_process(ngx_cycle_t *cycle, ngx_spawn_proc_pt proc, void *data,
         ngx_close_channel(ngx_processes[s].channel, cycle->log);
         return NGX_INVALID_PID;
 
-    case 0: /* ×Ó½ø³Ì */
+    case 0: /* å­è¿›ç¨‹ */
         ngx_pid = ngx_getpid();
-        /* ÔËĞĞ¶ÔÓ¦µÄ»Øµ÷º¯Êı */
+        /* è¿è¡Œå¯¹åº”çš„å›è°ƒå‡½æ•° */
         proc(cycle, data);
         break;
 
@@ -217,7 +217,7 @@ ngx_spawn_process(ngx_cycle_t *cycle, ngx_spawn_proc_pt proc, void *data,
 
     ngx_processes[s].proc = proc;
     ngx_processes[s].data = data;
-    ngx_processes[s].name = name; /* ½ø³ÌµÄÃû×Ö */
+    ngx_processes[s].name = name; /* è¿›ç¨‹çš„åå­— */
     ngx_processes[s].exiting = 0;
 
     switch (respawn) {
@@ -305,7 +305,7 @@ ngx_init_signals(ngx_log_t *log)
 }
 
 /*
- * ´¦Àí½ÓÊÕµ½µÄĞÅºÅ
+ * å¤„ç†æ¥æ”¶åˆ°çš„ä¿¡å·
  */
 void
 ngx_signal_handler(int signo)
@@ -342,19 +342,19 @@ ngx_signal_handler(int signo)
 
         case ngx_signal_value(NGX_TERMINATE_SIGNAL):
         case SIGINT:
-            ngx_terminate = 1; /* ½ÓÊÕµ½ÍË³öÏûÏ¢ */
+            ngx_terminate = 1; /* æ¥æ”¶åˆ°é€€å‡ºæ¶ˆæ¯ */
             action = ", exiting";
             break;
 
         case ngx_signal_value(NGX_NOACCEPT_SIGNAL):
             if (ngx_daemonized) {
-                ngx_noaccept = 1; /* ²»ÔÙ½ÓÊÕĞÂÁ¬½Ó */
+                ngx_noaccept = 1; /* ä¸å†æ¥æ”¶æ–°è¿æ¥ */
                 action = ", stop accepting connections";
             }
             break;
 
         case ngx_signal_value(NGX_RECONFIGURE_SIGNAL):
-            ngx_reconfigure = 1; /* ÖØĞÂ¼ÓÔØÅäÖÃ */
+            ngx_reconfigure = 1; /* é‡æ–°åŠ è½½é…ç½® */
             action = ", reconfiguring";
             break;
 

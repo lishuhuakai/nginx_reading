@@ -5,7 +5,7 @@
  */
 
 /*
- * ngx¶¯Ì¬Êı×éµÄÊµÏÖ
+ * ngxåŠ¨æ€æ•°ç»„çš„å®ç°
  */
 
 #ifndef _NGX_ARRAY_H_INCLUDED_
@@ -17,18 +17,18 @@
 
 
 struct ngx_array_s {
-    void        *elts; /* Ö¸ÏòÊı×éµÄÊ×µØÖ· */
-    ngx_uint_t   nelts;  /* Êı×éÖĞÒÑ¾­Ê¹ÓÃÁËÔªËØµÄ¸öÊı */
-    size_t       size; /* Ã¿¸öÊı×éÔªËØÕ¼ÓÃÄÚ´æ¿Õ¼äµÄ´óĞ¡ */
-    ngx_uint_t   nalloc; /* µ±Ç°Êı×éÖĞÄÜ¹»ÈİÄÉÔªËØ¸öÊıµÄ×Ü´óĞ¡ */
-    ngx_pool_t  *pool; /* ÄÚ´æ³Ø¶ÔÏó */
+    void        *elts; /* æŒ‡å‘æ•°ç»„çš„é¦–åœ°å€ */
+    ngx_uint_t   nelts;  /* æ•°ç»„ä¸­å·²ç»ä½¿ç”¨äº†å…ƒç´ çš„ä¸ªæ•° */
+    size_t       size; /* æ¯ä¸ªæ•°ç»„å…ƒç´ å ç”¨å†…å­˜ç©ºé—´çš„å¤§å° */
+    ngx_uint_t   nalloc; /* å½“å‰æ•°ç»„ä¸­èƒ½å¤Ÿå®¹çº³å…ƒç´ ä¸ªæ•°çš„æ€»å¤§å° */
+    ngx_pool_t  *pool; /* å†…å­˜æ± å¯¹è±¡ */
 };
 
 /*
- * ¹¹½¨Ò»¸ö¶¯Ì¬Êı×é
- *@p ÄÚ´æ³Ø
- *@n ³õÊ¼»¯ÈİÁ¿´óĞ¡
- *@size Ã¿¸öÔªËØËùÕ¼µÄÄÚ´æ´óĞ¡
+ * æ„å»ºä¸€ä¸ªåŠ¨æ€æ•°ç»„
+ *@p å†…å­˜æ± 
+ *@n åˆå§‹åŒ–å®¹é‡å¤§å°
+ *@size æ¯ä¸ªå…ƒç´ æ‰€å çš„å†…å­˜å¤§å°
  */
 ngx_array_t *ngx_array_create(ngx_pool_t *p, ngx_uint_t n, size_t size);
 void ngx_array_destroy(ngx_array_t *a);
@@ -36,7 +36,7 @@ void *ngx_array_push(ngx_array_t *a);
 void *ngx_array_push_n(ngx_array_t *a, ngx_uint_t n);
 
 /*
- * ³õÊ¼»¯Ò»¸öÒÑ¾­´æÔÚµÄ¶¯Ì¬Êı×é
+ * åˆå§‹åŒ–ä¸€ä¸ªå·²ç»å­˜åœ¨çš„åŠ¨æ€æ•°ç»„
  */
 static ngx_inline ngx_int_t
 ngx_array_init(ngx_array_t *array, ngx_pool_t *pool, ngx_uint_t n, size_t size)

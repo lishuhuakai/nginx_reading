@@ -133,7 +133,7 @@ ngx_array_push_n(ngx_array_t *a, ngx_uint_t n)
             if (new == NULL) {
                 return NULL;
             }
-            /* 这里是直接拷贝n个元素到新分配的内存之中 */
+            /* 杩欓噷鏄洿鎺ユ嫹璐漬涓厓绱犲埌鏂板垎閰嶇殑鍐呭瓨涔嬩腑 */
             ngx_memcpy(new, a->elts, a->nelts * a->size);
             a->elts = new;
             a->nalloc = nalloc;

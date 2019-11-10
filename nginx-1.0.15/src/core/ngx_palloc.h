@@ -41,38 +41,38 @@ struct ngx_pool_cleanup_s {
 typedef struct ngx_pool_large_s  ngx_pool_large_t;
 
 struct ngx_pool_large_s {
-    ngx_pool_large_t     *next; /* ���еĴ���ڴ�ͨ��nextָ������һ�� */
-    void                 *alloc; /* ʵ��ͨ��ngx_alloc������Ĵ���ڴ� */
+    ngx_pool_large_t     *next; /* 所有的大块内存通过next指针连在一起 */
+    void                 *alloc; /* 实际通过ngx_alloc分配出的大块内存 */
 };
 
 
 typedef struct {
-    /* ָ��δ����Ŀ����ڴ���׵�ַ */
+    /* 指向未分配的空闲内存的首地址 */
     u_char               *last;
-    /* ָ��ǰС���ڴ�ص�β�� */
+    /* 指向当前小块内存池的尾部 */
     u_char               *end;
-    /* ͬ����һ��pool�Ķ��С���ڴ�ؼ�,ͨ��next���� */
+    /* 同属于一个pool的多个小块内存池间,通过next相连 */
     ngx_pool_t           *next;
     ngx_uint_t            failed;
 } ngx_pool_data_t;
 
-/* nginx�ڴ��
+/* nginx内存池
  */
 struct ngx_pool_s {
-    /* ����С���ڴ��.������С���ڴ�ʱ,ʣ���Ԥ����ռ䲻��ʱ,���ٷ���1��ngx_poot_t
-     * ���ǻ�ͨ��d�е�next��Ա���ɵ�����
+    /* 描述小块内存池.当分配小块内存时,剩余的预分配空间不足时,会再分配1个ngx_poot_t
+     * 它们会通过d中的next成员构成单链表
      */
     ngx_pool_data_t       d;
-    /* ���������ڴ�����С�黹�Ǵ��ı�׼ */
+    /* 评估申请内存属于小块还是大块的标准 */
     size_t                max;
-    /* ���С���ڴ�ع�������ʱ,currentָ������ڴ�ʱ�����ĵ�1��С���ڴ�� */
+    /* 多个小块内存池构成链表时,current指向分配内存时遍历的第1个小块内存池 */
     ngx_pool_t           *current;
     ngx_chain_t          *chain;
-    /* ����ڴ涼ֱ�Ӵӽ��̵Ķ��з���,Ϊ���ܹ��������ڴ��ʱͬʱ�ͷŴ���ڴ�
-     * �ͽ�ÿһ�η���Ĵ���ڴ�ͨ��ngx_pool_large_t��ɵ���������large��Ա��
+    /* 大块内存都直接从进程的堆中分配,为了能够在销毁内存池时同时释放大块内存
+     * 就将每一次分配的大块内存通过ngx_pool_large_t组成单链表挂在large成员上
      */
     ngx_pool_large_t     *large;
-    /* ���д�������Դ,��ngx_pool_cleanup_t���󹹳ɵ���������cleanup��Ա�� */
+    /* 所有待清理资源,以ngx_pool_cleanup_t对象构成单链表挂在cleanup成员上 */
     ngx_pool_cleanup_t   *cleanup;
     ngx_log_t            *log;
 };

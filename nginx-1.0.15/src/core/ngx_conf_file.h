@@ -146,10 +146,10 @@ struct ngx_module_s {
 
 
 typedef struct {
-    ngx_str_t             name; /* ºËĞÄÄ£¿éÃû³Æ */
-    /* ½âÎöÅäÖÃÑ¡ÏîÖ®Ç°,nginx¿ò¼Ü»áµ÷ÓÃcreate_conf·½·¨ */
+    ngx_str_t             name; /* æ ¸å¿ƒæ¨¡å—åç§° */
+    /* è§£æé…ç½®é€‰é¡¹ä¹‹å‰,nginxæ¡†æ¶ä¼šè°ƒç”¨create_confæ–¹æ³• */
     void               *(*create_conf)(ngx_cycle_t *cycle);
-    /* ½âÎöÅäÖÃÏîÍê³ÉÖ®ºó,nginx¿ò¼Ü»áµ÷ÓÃinit_conf·½·¨ */
+    /* è§£æé…ç½®é¡¹å®Œæˆä¹‹å,nginxæ¡†æ¶ä¼šè°ƒç”¨init_confæ–¹æ³• */
     char               *(*init_conf)(ngx_cycle_t *cycle, void *conf);
 } ngx_core_module_t;
 

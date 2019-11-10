@@ -13,7 +13,7 @@
 #include <ngx_core.h>
 
 /*
- * ngx ºìºÚÊ÷µÄ¾ßÌåÊµÏÖ
+ * ngx çº¢é»‘æ ‘çš„å…·ä½“å®ç°
  */
 
 typedef ngx_uint_t  ngx_rbtree_key_t;
@@ -23,11 +23,11 @@ typedef ngx_int_t   ngx_rbtree_key_int_t;
 typedef struct ngx_rbtree_node_s  ngx_rbtree_node_t;
 
 struct ngx_rbtree_node_s {
-    ngx_rbtree_key_t       key; /* ÎŞ·ûºÅÕûĞÍ¹Ø¼ü×Ö */
-    ngx_rbtree_node_t     *left; /* ×ó×Ó½Úµã */
-    ngx_rbtree_node_t     *right; /* ÓÒ×Ó½Úµã */
-    ngx_rbtree_node_t     *parent; /* ¸¸½Úµã */
-    u_char                 color;  /* ½ÚµãÑÕÉ« */
+    ngx_rbtree_key_t       key; /* æ— ç¬¦å·æ•´å‹å…³é”®å­— */
+    ngx_rbtree_node_t     *left; /* å·¦å­èŠ‚ç‚¹ */
+    ngx_rbtree_node_t     *right; /* å³å­èŠ‚ç‚¹ */
+    ngx_rbtree_node_t     *parent; /* çˆ¶èŠ‚ç‚¹ */
+    u_char                 color;  /* èŠ‚ç‚¹é¢œè‰² */
     u_char                 data;
 };
 
@@ -38,9 +38,9 @@ typedef void (*ngx_rbtree_insert_pt) (ngx_rbtree_node_t *root,
     ngx_rbtree_node_t *node, ngx_rbtree_node_t *sentinel);
 
 struct ngx_rbtree_s {
-    ngx_rbtree_node_t     *root; /* Ö¸ÏòÊ÷µÄ¸ù½Úµã */
-    ngx_rbtree_node_t     *sentinel; /* Ö¸ÏòNILÉÚ±ø½Úµã */
-    ngx_rbtree_insert_pt   insert; /* »Øµ÷º¯Êı,±íÊ¾ºìºÚÊ÷Ìí¼ÓÔªËØµÄº¯ÊıÖ¸Õë */
+    ngx_rbtree_node_t     *root; /* æŒ‡å‘æ ‘çš„æ ¹èŠ‚ç‚¹ */
+    ngx_rbtree_node_t     *sentinel; /* æŒ‡å‘NILå“¨å…µèŠ‚ç‚¹ */
+    ngx_rbtree_insert_pt   insert; /* å›è°ƒå‡½æ•°,è¡¨ç¤ºçº¢é»‘æ ‘æ·»åŠ å…ƒç´ çš„å‡½æ•°æŒ‡é’ˆ */
 };
 
 

@@ -12,25 +12,25 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 /*
- * ngxµ¥ÏòÁ´±íµÄÊµÏÖ
+ * ngxå•å‘é“¾è¡¨çš„å®ç°
  */
 
 typedef struct ngx_list_part_s  ngx_list_part_t;
 
 struct ngx_list_part_s {
     void             *elts;
-    ngx_uint_t        nelts; /* ÔªËØ¸öÊı */
+    ngx_uint_t        nelts; /* å…ƒç´ ä¸ªæ•° */
     ngx_list_part_t  *next;
 };
 
 /*
- * Á´±íÍ·²¿
+ * é“¾è¡¨å¤´éƒ¨
  */
 typedef struct {
-    ngx_list_part_t  *last; /* Á´±íµÄ×îºóÒ»¸öÊı×éÔªËØ */
-    ngx_list_part_t   part; /* Á´±íµÄÊ×¸öµØÖ·ÔªËØ */
+    ngx_list_part_t  *last; /* é“¾è¡¨çš„æœ€åä¸€ä¸ªæ•°ç»„å…ƒç´  */
+    ngx_list_part_t   part; /* é“¾è¡¨çš„é¦–ä¸ªåœ°å€å…ƒç´  */
     size_t            size;
-    ngx_uint_t        nalloc; /* Ã¿¸öngx_list_part_tÊı×éµÄÈİÁ¿ */
+    ngx_uint_t        nalloc; /* æ¯ä¸ªngx_list_part_tæ•°ç»„çš„å®¹é‡ */
     ngx_pool_t       *pool;
 } ngx_list_t;
 
@@ -38,9 +38,9 @@ typedef struct {
 ngx_list_t *ngx_list_create(ngx_pool_t *pool, ngx_uint_t n, size_t size);
 
 /*
- * µ¥ÏòÁ´±í³õÊ¼»¯
- *@n Ô¤·ÖÅä¿Õ¼äµÄ¸öÊı
- *@size ÔªËØµÄ´óĞ¡
+ * å•å‘é“¾è¡¨åˆå§‹åŒ–
+ *@n é¢„åˆ†é…ç©ºé—´çš„ä¸ªæ•°
+ *@size å…ƒç´ çš„å¤§å°
  */
 static ngx_inline ngx_int_t
 ngx_list_init(ngx_list_t *list, ngx_pool_t *pool, ngx_uint_t n, size_t size)

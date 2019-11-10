@@ -110,7 +110,7 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
         }
 
         ls[i].socklen = NGX_SOCKADDRLEN;
-        if (getsockname(ls[i].fd, ls[i].sockaddr, &ls[i].socklen) == -1) { /* 获取主机名称 */
+        if (getsockname(ls[i].fd, ls[i].sockaddr, &ls[i].socklen) == -1) { /* 鑾峰彇涓绘満鍚嶇О */
             ngx_log_error(NGX_LOG_CRIT, cycle->log, ngx_socket_errno,
                           "getsockname() of the inherited "
                           "socket #%d failed", ls[i].fd);
@@ -127,7 +127,7 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
              break;
 #endif
 
-#if (NGX_HAVE_UNIX_DOMAIN) /* 域套接字 */
+#if (NGX_HAVE_UNIX_DOMAIN) /* 鍩熷鎺ュ瓧 */
         case AF_UNIX:
              ls[i].addr_text_max_len = NGX_UNIX_ADDRSTRLEN;
              len = NGX_UNIX_ADDRSTRLEN;
@@ -147,7 +147,7 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
             continue;
         }
 
-        ls[i].addr_text.data = ngx_pnalloc(cycle->pool, len); /* 内存分配 */
+        ls[i].addr_text.data = ngx_pnalloc(cycle->pool, len); /* 鍐呭瓨鍒嗛厤 */
         if (ls[i].addr_text.data == NULL) {
             return NGX_ERROR;
         }
@@ -162,7 +162,7 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
         ls[i].backlog = NGX_LISTEN_BACKLOG;
 
         olen = sizeof(int);
-        /* 设定接收缓存和发送缓存的大小 */
+        /* 璁惧畾鎺ユ敹缂撳瓨鍜屽彂閫佺紦瀛樼殑澶у皬 */
         if (getsockopt(ls[i].fd, SOL_SOCKET, SO_RCVBUF, (void *) &ls[i].rcvbuf,
                        &olen)
             == -1)

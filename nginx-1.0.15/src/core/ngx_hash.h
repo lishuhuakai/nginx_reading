@@ -13,30 +13,30 @@
 #include <ngx_core.h>
 
 /*
- * ngx hashµÄÊµÏÖ
+ * ngx hashçš„å®ç°
  */
 
 
 /*
- * hash±íÖĞµÄÔªËØ
+ * hashè¡¨ä¸­çš„å…ƒç´ 
  */
 typedef struct {
-    void             *value; /* Ö¸ÏòÓÃ»§µÄÊı¾İ */
-    u_short           len;   /* ÔªËØ¹Ø¼ü×ÖµÄ³¤¶È */
+    void             *value; /* æŒ‡å‘ç”¨æˆ·çš„æ•°æ® */
+    u_short           len;   /* å…ƒç´ å…³é”®å­—çš„é•¿åº¦ */
     u_char            name[1];
 } ngx_hash_elt_t;
 
 
 /*
- * »ù±¾hash±í
+ * åŸºæœ¬hashè¡¨
  */
 typedef struct {
-    ngx_hash_elt_t  **buckets; /* Ö¸ÏòÉ¢ÁĞ±íÊ×µØÖ· */
-    ngx_uint_t        size; /* É¢ÁĞ±íÖĞ²ÛµÄ¸öÊı */
+    ngx_hash_elt_t  **buckets; /* æŒ‡å‘æ•£åˆ—è¡¨é¦–åœ°å€ */
+    ngx_uint_t        size; /* æ•£åˆ—è¡¨ä¸­æ§½çš„ä¸ªæ•° */
 } ngx_hash_t;
 
 /*
- * Ç°ÖÃ(ºóÖÃ)Í¨Åä·ûµÄÉ¢ÁĞ±í
+ * å‰ç½®(åç½®)é€šé…ç¬¦çš„æ•£åˆ—è¡¨
  */
 typedef struct {
     ngx_hash_t        hash;
@@ -45,12 +45,12 @@ typedef struct {
 
 
 /*
- * hash¼ü
+ * hashé”®
  */
 typedef struct {
-    ngx_str_t         key; /* ÔªËØ¹Ø¼ü×Ö */
-    ngx_uint_t        key_hash; /* ÓÉÉ¢ÁĞ·½·¨¼ÆËã³öÀ´µÄ¹Ø¼üÂë */
-    void             *value; /* Ö¸ÏòÊµ¼ÊµÄÓÃ»§Êı¾İ */
+    ngx_str_t         key; /* å…ƒç´ å…³é”®å­— */
+    ngx_uint_t        key_hash; /* ç”±æ•£åˆ—æ–¹æ³•è®¡ç®—å‡ºæ¥çš„å…³é”®ç  */
+    void             *value; /* æŒ‡å‘å®é™…çš„ç”¨æˆ·æ•°æ® */
 } ngx_hash_key_t;
 
 
@@ -64,15 +64,15 @@ typedef struct {
 } ngx_hash_combined_t;
 
 
-/* ÓÃÓÚ³õÊ¼»¯É¢ÁĞ±í */
+/* ç”¨äºåˆå§‹åŒ–æ•£åˆ—è¡¨ */
 typedef struct {
     ngx_hash_t       *hash;
     ngx_hash_key_pt   key;
 
-    ngx_uint_t        max_size; /* ²ÛµÄ¸öÊı */
-    ngx_uint_t        bucket_size; /* Ã¿¸ö²ÛµÄ´óĞ¡ */
+    ngx_uint_t        max_size; /* æ§½çš„ä¸ªæ•° */
+    ngx_uint_t        bucket_size; /* æ¯ä¸ªæ§½çš„å¤§å° */
 
-    char             *name; /* É¢ÁĞ±í´óĞ¡ */
+    char             *name; /* æ•£åˆ—è¡¨å¤§å° */
     ngx_pool_t       *pool;
     ngx_pool_t       *temp_pool;
 } ngx_hash_init_t;
@@ -89,12 +89,12 @@ typedef struct {
 
 
 typedef struct {
-    ngx_uint_t        hsize; /* É¢ÁĞ±í²ÛµÄ¸öÊı */
+    ngx_uint_t        hsize; /* æ•£åˆ—è¡¨æ§½çš„ä¸ªæ•° */
 
     ngx_pool_t       *pool;
     ngx_pool_t       *temp_pool;
 
-    ngx_array_t       keys; /* ¶¯Ì¬Êı×éÒÔngx_hash_key_t½á¹¹Ìå±£´æ×Å²»º¬ÓĞÍ¨Åä·û¹Ø¼ü×ÖµÄÔªËØ */
+    ngx_array_t       keys; /* åŠ¨æ€æ•°ç»„ä»¥ngx_hash_key_tç»“æ„ä½“ä¿å­˜ç€ä¸å«æœ‰é€šé…ç¬¦å…³é”®å­—çš„å…ƒç´  */
     ngx_array_t      *keys_hash;
 
     ngx_array_t       dns_wc_head;
@@ -113,10 +113,10 @@ typedef struct {
 } ngx_table_elt_t;
 
 /*
- * É¢ÁĞ±í²éÕÒÏàÓ¦µÄÔªËØ
- *@key ¸ù¾İÉ¢ÁĞ·½·¨¼ÆËã³öÀ´µÄÉ¢ÁĞÖµ
- *@name Êµ¼Ê¹Ø¼ü×ÖµÄµØÖ·
- *@len Êµ¼Ê¹Ø¼ü×ÖµÄ³¤¶È
+ * æ•£åˆ—è¡¨æŸ¥æ‰¾ç›¸åº”çš„å…ƒç´ 
+ *@key æ ¹æ®æ•£åˆ—æ–¹æ³•è®¡ç®—å‡ºæ¥çš„æ•£åˆ—å€¼
+ *@name å®é™…å…³é”®å­—çš„åœ°å€
+ *@len å®é™…å…³é”®å­—çš„é•¿åº¦
  */
 void *ngx_hash_find(ngx_hash_t *hash, ngx_uint_t key, u_char *name, size_t len);
 void *ngx_hash_find_wc_head(ngx_hash_wildcard_t *hwc, u_char *name, size_t len);

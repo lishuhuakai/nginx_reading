@@ -196,7 +196,7 @@ static char        *ngx_signal;
 static char **ngx_os_environ;
 
 /*
- * nginxÆô¶¯Î»ÖÃ
+ * nginxå¯åŠ¨ä½ç½®
  */
 int ngx_cdecl
 main(int argc, char *const *argv)
@@ -277,7 +277,7 @@ main(int argc, char *const *argv)
     ngx_regex_init();
 #endif
 
-    ngx_pid = ngx_getpid(); /* »ñÈ¡pid */
+    ngx_pid = ngx_getpid(); /* è·å–pid */
 
     log = ngx_log_init(ngx_prefix);
     if (log == NULL) {
@@ -297,7 +297,7 @@ main(int argc, char *const *argv)
     ngx_memzero(&init_cycle, sizeof(ngx_cycle_t));
     init_cycle.log = log;
     ngx_cycle = &init_cycle;
-    /* ´´½¨Ò»¸öÄÚ´æ³Ø */
+    /* åˆ›å»ºä¸€ä¸ªå†…å­˜æ±  */
     init_cycle.pool = ngx_create_pool(1024, log);
     if (init_cycle.pool == NULL) {
         return 1;
@@ -406,7 +406,7 @@ main(int argc, char *const *argv)
     }
 
     ngx_use_stderr = 0;
-    /* ¸ù¾İÅäÖÃÎÄ¼şÖĞµÄÑ¡Ïî,¾ö¶¨ÊÇµ¥½ø³Ì»¹ÊÇ¶à½ø³Ì */
+    /* æ ¹æ®é…ç½®æ–‡ä»¶ä¸­çš„é€‰é¡¹,å†³å®šæ˜¯å•è¿›ç¨‹è¿˜æ˜¯å¤šè¿›ç¨‹ */
     if (ngx_process == NGX_PROCESS_SINGLE) {
         ngx_single_process_cycle(cycle);
 
@@ -418,9 +418,9 @@ main(int argc, char *const *argv)
 }
 
 
-/* ÔÚÖ´ĞĞ²»ÖØÆô·şÎñÆ÷Éı¼¶NginxµÄ²Ù×÷Ê±,ÀÏµÄNginx½ø³Ì»áÍ¨¹ı
- * »·¾³±äÁ¿NGINXÀ´´«µİĞèÒª´ò¿ªµÄ¼àÌı¶Ë¿Ú,ĞÂµÄNginx½ø³Ì»áÍ¨¹ı
- * ngx_add_inherited_sockets·½·¨À´Ê¹ÓÃÒÑ¾­´ò¿ªµÄTCP¼àÌı¶Ë¿Ú
+/* åœ¨æ‰§è¡Œä¸é‡å¯æœåŠ¡å™¨å‡çº§Nginxçš„æ“ä½œæ—¶,è€çš„Nginxè¿›ç¨‹ä¼šé€šè¿‡
+ * ç¯å¢ƒå˜é‡NGINXæ¥ä¼ é€’éœ€è¦æ‰“å¼€çš„ç›‘å¬ç«¯å£,æ–°çš„Nginxè¿›ç¨‹ä¼šé€šè¿‡
+ * ngx_add_inherited_socketsæ–¹æ³•æ¥ä½¿ç”¨å·²ç»æ‰“å¼€çš„TCPç›‘å¬ç«¯å£
  */
 static ngx_int_t
 ngx_add_inherited_sockets(ngx_cycle_t *cycle)
@@ -447,7 +447,7 @@ ngx_add_inherited_sockets(ngx_cycle_t *cycle)
 
     for (p = inherited, v = p; *p; p++) {
         if (*p == ':' || *p == ';') {
-            s = ngx_atoi(v, p - v); /* ÎÄ¼şÃèÊö·ûµÄÖµ */
+            s = ngx_atoi(v, p - v); /* æ–‡ä»¶æè¿°ç¬¦çš„å€¼ */
             if (s == NGX_ERROR) {
                 ngx_log_error(NGX_LOG_EMERG, cycle->log, 0,
                               "invalid socket number \"%s\" in " NGINX_VAR
@@ -670,7 +670,7 @@ ngx_exec_new_binary(ngx_cycle_t *cycle, char *const *argv)
 
 
 /*
- * nginx½âÎöÏà¹ØµÄ²ÎÊıĞÅÏ¢
+ * nginxè§£æç›¸å…³çš„å‚æ•°ä¿¡æ¯
  */
 static ngx_int_t
 ngx_get_options(int argc, char *const *argv)
@@ -730,7 +730,7 @@ ngx_get_options(int argc, char *const *argv)
 
             case 'c':
                 if (*p) {
-                    ngx_conf_file = p; /* nginxÅäÖÃÎÄ¼şËùÔÚµÄÂ·¾¶ */
+                    ngx_conf_file = p; /* nginxé…ç½®æ–‡ä»¶æ‰€åœ¨çš„è·¯å¾„ */
                     goto next;
                 }
 
@@ -838,7 +838,7 @@ ngx_save_argv(ngx_cycle_t *cycle, int argc, char *const *argv)
 
 
 /*
- * ³õÊ¼»¯Ïà¹ØµÄ²ÎÊıĞÅÏ¢
+ * åˆå§‹åŒ–ç›¸å…³çš„å‚æ•°ä¿¡æ¯
  */
 static ngx_int_t
 ngx_process_options(ngx_cycle_t *cycle)

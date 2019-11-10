@@ -16,31 +16,31 @@
 typedef struct ngx_listening_s  ngx_listening_t;
 
 /*
- * Ã¿¸öngx_listening_t½á¹¹Ìå´ú±ínginx·şÎñÆ÷¼àÌıµÄÒ»¸ö¶Ë¿Ú
+ * æ¯ä¸ªngx_listening_tç»“æ„ä½“ä»£è¡¨nginxæœåŠ¡å™¨ç›‘å¬çš„ä¸€ä¸ªç«¯å£
  */
 struct ngx_listening_s {
-    ngx_socket_t        fd; /* socketÌ×½Ó×Ö¾ä±ú */
+    ngx_socket_t        fd; /* socketå¥—æ¥å­—å¥æŸ„ */
 
-    struct sockaddr    *sockaddr; /* ¼àÌıµÄsockaddrµØÖ· */
+    struct sockaddr    *sockaddr; /* ç›‘å¬çš„sockaddråœ°å€ */
     socklen_t           socklen;    /* size of sockaddr */
-    size_t              addr_text_max_len; /* ´æ´¢IPµØÖ·×Ö·û´®µÄ×î´ó³¤¶È,Ò²¾ÍÊÇaddr_textµÄ³¤¶È */
-    ngx_str_t           addr_text; /* ÒÔ×Ö·û´®ĞÎÊ½´æ´¢IPµØÖ· */
+    size_t              addr_text_max_len; /* å­˜å‚¨IPåœ°å€å­—ç¬¦ä¸²çš„æœ€å¤§é•¿åº¦,ä¹Ÿå°±æ˜¯addr_textçš„é•¿åº¦ */
+    ngx_str_t           addr_text; /* ä»¥å­—ç¬¦ä¸²å½¢å¼å­˜å‚¨IPåœ°å€ */
 
-    int                 type; /* Ì×½Ó×ÖÀàĞÍ,µ±typeÎªSOCK_STREAMÊ±,±íÊ¾TCP */
+    int                 type; /* å¥—æ¥å­—ç±»å‹,å½“typeä¸ºSOCK_STREAMæ—¶,è¡¨ç¤ºTCP */
 
     int                 backlog;
-    int                 rcvbuf; /* ½ÓÊÕ»º³åÇø´óĞ¡ */
-    int                 sndbuf; /* ·¢ËÍ»º³åÇø´óĞ¡ */
+    int                 rcvbuf; /* æ¥æ”¶ç¼“å†²åŒºå¤§å° */
+    int                 sndbuf; /* å‘é€ç¼“å†²åŒºå¤§å° */
 
     /* handler of accepted connection */
-    ngx_connection_handler_pt   handler; /* tcpÁ¬½Ó³É¹¦Ö®ºóµÄ´¦Àí·½·¨ */
+    ngx_connection_handler_pt   handler; /* tcpè¿æ¥æˆåŠŸä¹‹åçš„å¤„ç†æ–¹æ³• */
 
     void               *servers;  /* array of ngx_http_in_addr_t, for example */
 
     ngx_log_t           log;
     ngx_log_t          *logp;
 
-    /* Èç¹ûÎªĞÂµÄtcpÁ¬½Ó´´½¨ÄÚ´æ³Ø,ÔòÄÚ´æ³ØµÄ³õÊ¼´óĞ¡Ó¦¸ÃÊÇpool_size */
+    /* å¦‚æœä¸ºæ–°çš„tcpè¿æ¥åˆ›å»ºå†…å­˜æ± ,åˆ™å†…å­˜æ± çš„åˆå§‹å¤§å°åº”è¯¥æ˜¯pool_size */
     size_t              pool_size;
     /* should be here because of the AcceptEx() preread */
     size_t              post_accept_buffer_size;
@@ -48,9 +48,9 @@ struct ngx_listening_s {
     ngx_msec_t          post_accept_timeout;
 
     ngx_listening_t    *previous;
-    /* µ±Ç°¼àÌı¾ä±ú¶ÔÓ¦×ÅµÄngx_connection_t½á¹¹Ìå */
+    /* å½“å‰ç›‘å¬å¥æŸ„å¯¹åº”ç€çš„ngx_connection_tç»“æ„ä½“ */
     ngx_connection_t   *connection;
-    /* openÎª1±íÊ¾µ±Ç°¼àÌı¾ä±úÓĞĞ§,Ö´ĞĞngx_init_cycleÊ±²»¹Ø±Õ¼àÌı¶Ë¿Ú,Îª0±íÊ¾Õı³£¹Ø±Õ */
+    /* openä¸º1è¡¨ç¤ºå½“å‰ç›‘å¬å¥æŸ„æœ‰æ•ˆ,æ‰§è¡Œngx_init_cycleæ—¶ä¸å…³é—­ç›‘å¬ç«¯å£,ä¸º0è¡¨ç¤ºæ­£å¸¸å…³é—­ */
     unsigned            open:1;
     /* remain */
     unsigned            remain:1;
