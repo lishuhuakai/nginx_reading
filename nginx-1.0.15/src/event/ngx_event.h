@@ -489,9 +489,11 @@ typedef struct {
 
 
 typedef struct {
+    /* 事件模块的名称 */
     ngx_str_t              *name;
-
+    /* 在解析配置项前，这个回调方法用于创建存储配置项参数的结构 */
     void                 *(*create_conf)(ngx_cycle_t *cycle);
+    /* 在解析配置完成之后，init_conf方法会被调用，用以综合处理当前事件模块感兴趣的全部配置项 */
     char                 *(*init_conf)(ngx_cycle_t *cycle, void *conf);
 
     ngx_event_actions_t     actions;
