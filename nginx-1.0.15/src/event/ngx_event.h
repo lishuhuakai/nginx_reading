@@ -34,12 +34,15 @@ typedef struct {
     ngx_event_t     *last;
 } ngx_event_mutex_t;
 
-
+/*
+ * Nginx事件的定义
+ */
 struct ngx_event_s {
+    /* 事件相关的对象,通常data都是指向ngx_connection_t连接对象,开启文件异步IO的时候,它可能会指向ngx_event_aio_t对象 */
     void            *data;
-
+    /* 标志位,为1表示事件是可写的 */
     unsigned         write:1;
-
+    /* 标志位,为1表示此事件可以建立新的连接 */
     unsigned         accept:1;
 
     /* used to detect the stale events in kqueue, rtsig, and epoll */
@@ -48,25 +51,32 @@ struct ngx_event_s {
     /*
      * the event was passed or would be passed to a kernel;
      * in aio mode - operation was posted.
+     * 标志位,为1表示当前事件是活跃的,为0时表示事件是不活跃的.
      */
     unsigned         active:1;
-
+    
+    /* epoll中不用管 */
     unsigned         disabled:1;
 
     /* the ready event; in aio mode 0 means that no operation can be posted */
+    /* 标志位,为1时表示当前事件已经就绪,也就是说,允许这个事件的消费模块处理这个事件,在HTTP框架中,经常会检查事件的ready
+     * 标志位以确定是否可以连接请求或者发送响应.
+     */
     unsigned         ready:1;
-
+    /* epoll不管 */
     unsigned         oneshot:1;
 
     /* aio operation is complete */
     unsigned         complete:1;
-
+    /* 标志位,为1时表示当前处理的字符流已经结束 */
     unsigned         eof:1;
+    /* 标志位,为1时表示这个事件在处理过程中出现错误 */
     unsigned         error:1;
-
+    /* 标志位,为1时表示这个事件已经超时 */
     unsigned         timedout:1;
+    /* 标志位,为1时表示这个事件存在与定时器中 */
     unsigned         timer_set:1;
-
+    /* 标志位,为1时表示需要延迟处理这个事件,它仅用于限速功能 */
     unsigned         delayed:1;
 
     unsigned         read_discarded:1;
@@ -130,7 +140,7 @@ struct ngx_event_s {
     ngx_uint_t       index;
 
     ngx_log_t       *log;
-
+    /* 定时器节点,用于定时器红黑树中 */
     ngx_rbtree_node_t   timer;
 
     unsigned         closed:1;
@@ -228,20 +238,26 @@ typedef struct {
 
 
 typedef struct {
+    /* 添加事件方法,它负责将1个感兴趣的事件添加到操作系统提供的的事件驱动机制 */
     ngx_int_t  (*add)(ngx_event_t *ev, ngx_int_t event, ngx_uint_t flags);
+    /* 删除事件方法,它将1个已经存在于事件驱动机制中的事件移除 */
     ngx_int_t  (*del)(ngx_event_t *ev, ngx_int_t event, ngx_uint_t flags);
-
+    /* 启用1个事件 */
     ngx_int_t  (*enable)(ngx_event_t *ev, ngx_int_t event, ngx_uint_t flags);
+    /* 禁用1个事件 */
     ngx_int_t  (*disable)(ngx_event_t *ev, ngx_int_t event, ngx_uint_t flags);
-
+    /* 向事件驱动机制中添加一个新的连接,这意味着连接上的读写事件都添加到了事件驱动机制中了 */
     ngx_int_t  (*add_conn)(ngx_connection_t *c);
+    /* 从事件驱动机制中移除一个连接的读写事件 */
     ngx_int_t  (*del_conn)(ngx_connection_t *c, ngx_uint_t flags);
 
     ngx_int_t  (*process_changes)(ngx_cycle_t *cycle, ngx_uint_t nowait);
+    /* 在正常的工作循环中,将通过调用process_events方法来处理事件 */
     ngx_int_t  (*process_events)(ngx_cycle_t *cycle, ngx_msec_t timer,
                    ngx_uint_t flags);
-
+    /* 初始化事件驱动模块的方法 */
     ngx_int_t  (*init)(ngx_cycle_t *cycle, ngx_msec_t timer);
+    /* 退出事件驱动模块的方法 */
     void       (*done)(ngx_cycle_t *cycle);
 } ngx_event_actions_t;
 
@@ -495,7 +511,7 @@ typedef struct {
     void                 *(*create_conf)(ngx_cycle_t *cycle);
     /* 在解析配置完成之后，init_conf方法会被调用，用以综合处理当前事件模块感兴趣的全部配置项 */
     char                 *(*init_conf)(ngx_cycle_t *cycle, void *conf);
-    /* demo */
+    /* 对于事件驱动机制,每个事件模块需要实现10个抽象方法 */
     ngx_event_actions_t     actions;
 } ngx_event_module_t;
 
