@@ -22,7 +22,9 @@ typedef struct {
 
 
 typedef struct {
+    /* 解析配置文件前调用 */
     ngx_int_t   (*preconfiguration)(ngx_conf_t *cf);
+    /* 完成配置文件的解析后调用 */
     ngx_int_t   (*postconfiguration)(ngx_conf_t *cf);
 
     void       *(*create_main_conf)(ngx_conf_t *cf);

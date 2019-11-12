@@ -76,9 +76,14 @@
 
 
 struct ngx_command_s {
+/* 配置项名称,如gzip */
     ngx_str_t             name;
+/* 配置项类型,type将指定配置项可以出现的位置,例如,出现在server{}或者location{}中,
+ * 以及它可以携带的参数个数 */
     ngx_uint_t            type;
+/* 出现了name中的配置项之后,将会调用set方法来处理配置项的参数 */
     char               *(*set)(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+/* 在配置文件中的偏移量 */
     ngx_uint_t            conf;
     ngx_uint_t            offset;
     void                 *post;
@@ -108,8 +113,18 @@ struct ngx_open_file_s {
 #define NGX_MODULE_V1          0, 0, 0, 0, 0, 0, 1
 #define NGX_MODULE_V1_PADDING  0, 0, 0, 0, 0, 0, 0, 0
 
+/* Nginx模块的定义
+ * */
 struct ngx_module_s {
+/* 对于一类模块而言,ctx_index表示当前模块在这类模块中的序号.这个成员常常是由管理这类
+ * 模块的一个Nginx核心模块设置的,对于所有的HTTP模块而言,ctx_index是由ngx_http_module
+ * 设置的,ctx_index非常重要,Nginx的模块化设计非常依赖于各个模块的顺序,它们既用于表达
+ * 优先级,也用于表示每个模块的位置,借以帮助Nginx框架快速获得某个模块的数据
+ */
     ngx_uint_t            ctx_index;
+/* index表示当前模块在ngx_modules数组中的序号,注意,ctx_index表示的当前模块在一类模块
+ * 中的序号,而index表示当前模块在所有模块中的位置, 它同样关键,Nginx启动时会根据ngx_modules
+ * 数组设置各个模块的index值 */
     ngx_uint_t            index;
 
     ngx_uint_t            spare0;
@@ -118,9 +133,14 @@ struct ngx_module_s {
     ngx_uint_t            spare3;
 
     ngx_uint_t            version;
-
+/* ctx用于指向一类模块的上下文结构,为什么需要ctx呢? 因为前面说过,Nginx模块有许多种类,
+ * 不同种类之间的功能差别很大,例如,事件模块主要处理I/O事件相关的功能,HTTP类型的模块主要
+ * 处理HTTP应用层的功能,这样,每个模块都有自己的特性,而ctx将会指向特定类型模块的公共接口.
+ * 例如,HTTP模块之中,ctx需要指向ngx_http_module_t结构体 */
     void                 *ctx;
+/* commands将处理nginx.conf中的配置项 */
     ngx_command_t        *commands;
+/* 模块类型 */
     ngx_uint_t            type;
 
     ngx_int_t           (*init_master)(ngx_log_t *log);
