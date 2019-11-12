@@ -33,16 +33,19 @@ typedef void (*ngx_event_save_peer_session_pt)(ngx_peer_connection_t *pc,
     void *data);
 #endif
 
-
+/*
+ * 用于表示一个主动连接
+ * */
 struct ngx_peer_connection_s {
     ngx_connection_t                *connection;
-
+    /* 远端服务器的socket地址 */
     struct sockaddr                 *sockaddr;
     socklen_t                        socklen;
+    /* 远端服务器的名称 */
     ngx_str_t                       *name;
-
+    /* 在连接一个远端服务器时,当前连接出现异常失败后可以重试的次数,也就是最多允许最多的失败次数 */
     ngx_uint_t                       tries;
-
+    /* 获取连接的方法 */
     ngx_event_get_peer_pt            get;
     ngx_event_free_peer_pt           free;
     void                            *data;
