@@ -9,7 +9,9 @@
 #include <ngx_core.h>
 #include <ngx_event.h>
 
-
+/*
+ * Nginx poll模块的实现
+ */
 static ngx_int_t ngx_poll_init(ngx_cycle_t *cycle, ngx_msec_t timer);
 static void ngx_poll_done(ngx_cycle_t *cycle);
 static ngx_int_t ngx_poll_add_event(ngx_event_t *ev, ngx_int_t event,
@@ -22,6 +24,7 @@ static char *ngx_poll_init_conf(ngx_cycle_t *cycle, void *conf);
 
 
 static struct pollfd  *event_list;
+/* nevnets记录实际分配的事件的数目 */
 static ngx_int_t       nevents;
 
 
@@ -63,7 +66,7 @@ ngx_module_t  ngx_poll_module = {
 };
 
 
-
+/* poll的初始化 */
 static ngx_int_t
 ngx_poll_init(ngx_cycle_t *cycle, ngx_msec_t timer)
 {
