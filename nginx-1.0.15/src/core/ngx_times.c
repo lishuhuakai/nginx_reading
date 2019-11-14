@@ -22,12 +22,17 @@
 
 static ngx_uint_t        slot;
 static ngx_atomic_t      ngx_time_lock;
-
+/* 格林威治时间1970年1月1日凌晨0点0分0秒到当前时间的毫秒数 */
 volatile ngx_msec_t      ngx_current_msec;
+/* ngx_time_t结构体形式的当前时间 */
 volatile ngx_time_t     *ngx_cached_time;
+/* 用于记录error_log的当前时间字符串,它的格式类似于"1970/09/28 12:00:00" */
 volatile ngx_str_t       ngx_cached_err_log_time;
+/* 用于http相关的当前时间字符串,它的格式类似于"Mon, 28 Sep 1970 06:00:00 GMT" */
 volatile ngx_str_t       ngx_cached_http_time;
+/* 用于记录HTTP日志的当前时间字符串,它的格式类似于 "28/Sep/1970:12:00:00 +600" */
 volatile ngx_str_t       ngx_cached_http_log_time;
+/* 以ISO 8601标准格式记录下的字符串形式 */
 volatile ngx_str_t       ngx_cached_http_log_iso8601;
 
 #if !(NGX_WIN32)
@@ -55,7 +60,9 @@ static u_char            cached_http_log_iso8601[NGX_TIME_SLOTS]
 static char  *week[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
 static char  *months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-
+/* 初始化当前进程中缓存的时间变量,同时会第一次根据gettimeofday调用
+ * 刷新缓存时间
+ */
 void
 ngx_time_init(void)
 {
@@ -69,7 +76,9 @@ ngx_time_init(void)
     ngx_time_update();
 }
 
-
+/* 使用gettimeofday调用以系统时间更新缓存的时间,上述的ngx_current_msec等
+ * 全局变量都会得到更新
+ */
 void
 ngx_time_update(void)
 {
@@ -79,7 +88,7 @@ ngx_time_update(void)
     ngx_uint_t       msec;
     ngx_time_t      *tp;
     struct timeval   tv;
-
+    /* 这里的使用很有意思,仅仅用一个原子变量就实现了加锁 */
     if (!ngx_trylock(&ngx_time_lock)) {
         return;
     }
@@ -229,7 +238,9 @@ ngx_time_sigsafe_update(void)
 
 #endif
 
-
+/* 将时间t转换成"Mon, 28 Sep 1970 06:00:00 GMT"形式的时间,返回值与
+ * buf是相同的,都是指向存放时间的字符串
+ */
 u_char *
 ngx_http_time(u_char *buf, time_t t)
 {

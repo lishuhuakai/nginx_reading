@@ -12,10 +12,13 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 
-
+/* Nginx时间 */
 typedef struct {
+    /* 格林威治时间1970年1月1日凌晨0点0分0秒到当前的秒数 */
     time_t      sec;
+    /* sec成员只能精确到秒,msec则是当前时间相对于sec的毫秒偏移 */
     ngx_uint_t  msec;
+    /* 时区 */
     ngx_int_t   gmtoff;
 } ngx_time_t;
 
