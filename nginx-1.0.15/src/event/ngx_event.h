@@ -54,7 +54,7 @@ struct ngx_event_s {
      * 标志位,为1表示当前事件是活跃的,为0时表示事件是不活跃的.
      */
     unsigned         active:1;
-    
+
     /* epoll中不用管 */
     unsigned         disabled:1;
 
@@ -460,11 +460,21 @@ extern ngx_event_actions_t   ngx_event_actions;
 #define NGX_CLEAR_EVENT    0    /* dummy declaration */
 #endif
 
+/* epoll模式下:
+ * process_evnets - ngx_epoll_process_events
+ * process_changes - NULL
+ */
 
 #define ngx_process_changes  ngx_event_actions.process_changes
 #define ngx_process_events   ngx_event_actions.process_events
 #define ngx_done_events      ngx_event_actions.done
 
+/* epoll模式下:
+ * add - ngx_epoll_add_event
+ * del - ngx_epoll_del_event
+ * add_conn - ngx_epoll_add_connection
+ * del_conn - ngx_epoll_del_connection
+ */
 #define ngx_add_event        ngx_event_actions.add
 #define ngx_del_event        ngx_event_actions.del
 #define ngx_add_conn         ngx_event_actions.add_conn

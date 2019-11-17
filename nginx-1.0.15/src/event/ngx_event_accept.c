@@ -15,6 +15,9 @@ static ngx_int_t ngx_disable_accept_events(ngx_cycle_t *cycle);
 static void ngx_close_accepted_connection(ngx_connection_t *c);
 
 
+/*
+ * 处理新的连接事件
+ */
 void
 ngx_event_accept(ngx_event_t *ev)
 {
@@ -58,6 +61,7 @@ ngx_event_accept(ngx_event_t *ev)
             s = accept(lc->fd, (struct sockaddr *) sa, &socklen);
         }
 #else
+        /* 调用accept方法试图建立新连接 */
         s = accept(lc->fd, (struct sockaddr *) sa, &socklen);
 #endif
 
@@ -103,10 +107,13 @@ ngx_event_accept(ngx_event_t *ev)
 #if (NGX_STAT_STUB)
         (void) ngx_atomic_fetch_add(ngx_stat_accepted, 1);
 #endif
-
+        /*
+         * 设置负载均衡阀值ngx_accept_disabled,这个阀值是进程允许的总连接数的1/8
+         * 减去空闲连接数
+         */
         ngx_accept_disabled = ngx_cycle->connection_n / 8
                               - ngx_cycle->free_connection_n;
-
+        /* 取出一个空闲的连接对象 */
         c = ngx_get_connection(s, ev->log);
 
         if (c == NULL) {
@@ -121,7 +128,7 @@ ngx_event_accept(ngx_event_t *ev)
 #if (NGX_STAT_STUB)
         (void) ngx_atomic_fetch_add(ngx_stat_active, 1);
 #endif
-
+        /* 为ngx_connection_t中的pool指针建立内存池 */
         c->pool = ngx_create_pool(ls->pool_size, ev->log);
         if (c->pool == NULL) {
             ngx_close_accepted_connection(c);
@@ -143,7 +150,7 @@ ngx_event_accept(ngx_event_t *ev)
         }
 
         /* set a blocking mode for aio and non-blocking mode for others */
-
+        /* 设置套接字的属性,如设为非阻塞套接字 */
         if (ngx_inherited_nonblocking) {
             if (ngx_event_flags & NGX_USE_AIO_EVENT) {
                 if (ngx_blocking(s) == -1) {
@@ -166,7 +173,7 @@ ngx_event_accept(ngx_event_t *ev)
         }
 
         *log = ls->log;
-
+        /* 设置对应的回调函数 */
         c->recv = ngx_recv;
         c->send = ngx_send;
         c->recv_chain = ngx_recv_chain;
@@ -271,6 +278,7 @@ ngx_event_accept(ngx_event_t *ev)
         ngx_log_debug3(NGX_LOG_DEBUG_EVENT, log, 0,
                        "*%d accept: %V fd:%d", c->number, &c->addr_text, s);
 
+        /* 将新连接对应的读事件添加到epoll等事件驱动模块中 */
         if (ngx_add_conn && (ngx_event_flags & NGX_USE_EPOLL_EVENT) == 0) {
             if (ngx_add_conn(c) == NGX_ERROR) {
                 ngx_close_accepted_connection(c);
@@ -280,7 +288,7 @@ ngx_event_accept(ngx_event_t *ev)
 
         log->data = NULL;
         log->handler = NULL;
-
+        /* tcp连接成功之后,调用监听对象ngx_listening_t中的handler回调方法 */
         ls->handler(c);
 
         if (ngx_event_flags & NGX_USE_KQUEUE_EVENT) {

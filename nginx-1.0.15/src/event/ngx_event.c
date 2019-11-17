@@ -196,13 +196,14 @@ ngx_module_t  ngx_event_core_module = {
 };
 
 
+/* 处理所有的事件 */
 void
 ngx_process_events_and_timers(ngx_cycle_t *cycle)
 {
     ngx_uint_t  flags;
     ngx_msec_t  timer, delta;
 
-    if (ngx_timer_resolution) {
+    if (ngx_timer_resolution) { /* 用户希望服务器事件精度为ngx_timer_resolution毫秒 */
         timer = NGX_TIMER_INFINITE;
         flags = 0;
 
@@ -242,6 +243,7 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
     }
 
     delta = ngx_current_msec;
+    /* 调用ngx_process_events方法,并且计算ngx_process_evnets执行消耗的时间 */
 
     (void) ngx_process_events(cycle, timer, flags);
 

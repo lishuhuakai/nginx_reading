@@ -117,11 +117,13 @@ static struct epoll_event  *event_list;
 static ngx_uint_t           nevents;
 
 #if (NGX_HAVE_FILE_AIO)
-
+/* 用于通知异步IO事件的描述符,它与iocb结构体中的aio_resfd成员是一致的 */
 int                         ngx_eventfd = -1;
+/* 异步I/O的上下文,全局唯一,必须经过io_setup初始化才能使用 */
 aio_context_t               ngx_aio_ctx = 0;
-
+/* 异步I/O事件完成之后进行通知的描述符,也就是ngx_eventfd所对应的ngx_evnet_t事件 */
 static ngx_event_t          ngx_eventfd_event;
+/* 异步I/O事件完成之后进行通知的描述符ngx_eventfd所对应的ngx_connection_t连接 */
 static ngx_connection_t     ngx_eventfd_conn;
 
 #endif
@@ -222,7 +224,7 @@ ngx_epoll_aio_init(ngx_cycle_t *cycle, ngx_epoll_conf_t *epcf)
 {
     int                 n;
     struct epoll_event  ee;
-
+    /* 获取一个描述符句柄 */
     ngx_eventfd = syscall(SYS_eventfd, 0);
 
     if (ngx_eventfd == -1) {
@@ -236,30 +238,32 @@ ngx_epoll_aio_init(ngx_cycle_t *cycle, ngx_epoll_conf_t *epcf)
                    "eventfd: %d", ngx_eventfd);
 
     n = 1;
-
+    /* 设置ngx_eventfd为无阻塞 */
     if (ioctl(ngx_eventfd, FIONBIO, &n) == -1) {
         ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_errno,
                       "ioctl(eventfd, FIONBIO) failed");
         goto failed;
     }
-
+    /* 初始化文件异步I/O的上下文 */
     if (io_setup(epcf->aio_requests, &ngx_aio_ctx) == -1) {
         ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_errno,
                       "io_setup() failed");
         goto failed;
     }
-
+    /* 设置用于异步I/O完成通知的ngx_eventfd事件,它与ngx_eventfd_conn连接是对应的 */
     ngx_eventfd_event.data = &ngx_eventfd_conn;
+    /* 在异步I/O事件完成之后,使用ngx_epoll_eventfd_handler方法处理 */
     ngx_eventfd_event.handler = ngx_epoll_eventfd_handler;
     ngx_eventfd_event.log = cycle->log;
     ngx_eventfd_event.active = 1;
+    /* 记录下套接字 */
     ngx_eventfd_conn.fd = ngx_eventfd;
     ngx_eventfd_conn.read = &ngx_eventfd_event;
     ngx_eventfd_conn.log = cycle->log;
 
     ee.events = EPOLLIN|EPOLLET;
     ee.data.ptr = &ngx_eventfd_conn;
-
+    /* 向epoll中添加异步I/O的通知描述符ngx_eventfd */
     if (epoll_ctl(ep, EPOLL_CTL_ADD, ngx_eventfd, &ee) != -1) {
         return;
     }
@@ -733,6 +737,7 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
 
 #if (NGX_HAVE_FILE_AIO)
 
+/* 异步I/O对应的处理函数 */
 static void
 ngx_epoll_eventfd_handler(ngx_event_t *ev)
 {
@@ -746,7 +751,7 @@ ngx_epoll_eventfd_handler(ngx_event_t *ev)
     struct timespec   ts;
 
     ngx_log_debug0(NGX_LOG_DEBUG_EVENT, ev->log, 0, "eventfd handler");
-
+    /* 获取已经完成的事件数目,并设置到ready中,注意,这个ready是可以大于64的 */
     n = read(ngx_eventfd, &ready, 8);
 
     err = ngx_errno;
