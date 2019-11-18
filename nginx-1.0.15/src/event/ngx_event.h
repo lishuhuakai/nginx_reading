@@ -514,6 +514,7 @@ typedef struct {
 } ngx_event_conf_t;
 
 
+/* Nginx事件模块 */
 typedef struct {
     /* 事件模块的名称 */
     ngx_str_t              *name;

@@ -73,6 +73,7 @@ struct ngx_cycle_s {
     ngx_uint_t                files_n;
     /* 当前进程中,所有的连接对象 */
     ngx_connection_t         *connections;
+    /* 链表 */
     ngx_event_t              *read_events;
     ngx_event_t              *write_events;
 

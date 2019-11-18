@@ -739,7 +739,7 @@ ngx_get_connection(ngx_socket_t s, ngx_log_t *log)
 
         return NULL;
     }
-
+    /* 这里很重要,data成员其实是指向下一个节点的指针 */
     ngx_cycle->free_connections = c->data;
     ngx_cycle->free_connection_n--;
 

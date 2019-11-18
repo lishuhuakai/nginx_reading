@@ -2616,6 +2616,9 @@ ngx_http_cleanup_add(ngx_http_request_t *r, size_t size)
 }
 
 
+/*
+ * 解析server{}配置块
+ */
 static char *
 ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
 {
@@ -2646,7 +2649,7 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     }
 
     /* the server{}'s loc_conf */
-
+    /* 每个模块对应一个loc配置项吗? */
     ctx->loc_conf = ngx_pcalloc(cf->pool, sizeof(void *) * ngx_http_max_module);
     if (ctx->loc_conf == NULL) {
         return NGX_CONF_ERROR;
@@ -2656,7 +2659,7 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
         if (ngx_modules[i]->type != NGX_HTTP_MODULE) {
             continue;
         }
-
+        /* 获取对应的http结构体 */
         module = ngx_modules[i]->ctx;
 
         if (module->create_srv_conf) {
@@ -2664,7 +2667,7 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
             if (mconf == NULL) {
                 return NGX_CONF_ERROR;
             }
-
+            /* 记录下创建的结构体 */
             ctx->srv_conf[ngx_modules[i]->ctx_index] = mconf;
         }
 
@@ -2673,20 +2676,20 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
             if (mconf == NULL) {
                 return NGX_CONF_ERROR;
             }
-
+            /* 记录下创建的loc结构体 */
             ctx->loc_conf[ngx_modules[i]->ctx_index] = mconf;
         }
     }
 
 
     /* the server configuration context */
-
+    /* 解析当前server{}块内的所有配置项 */
     cscf = ctx->srv_conf[ngx_http_core_module.ctx_index];
     cscf->ctx = ctx;
 
 
     cmcf = ctx->main_conf[ngx_http_core_module.ctx_index];
-
+    /* 将配置项压入 */
     cscfp = ngx_array_push(&cmcf->servers);
     if (cscfp == NULL) {
         return NGX_CONF_ERROR;

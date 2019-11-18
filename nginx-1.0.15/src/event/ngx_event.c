@@ -277,7 +277,10 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
     }
 }
 
-
+/* 将读事件添加到时间驱动模块中
+ * @rev 代操作的事件
+ * @flags 指定事件的驱动方式
+ */
 ngx_int_t
 ngx_handle_read_event(ngx_event_t *rev, ngx_uint_t flags)
 {
