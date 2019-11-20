@@ -140,8 +140,10 @@ typedef struct {
     ngx_array_t                handlers;
 } ngx_http_phase_t;
 
-
+/* ngx_http_core_module模块的main级别的配置项 */
 typedef struct {
+    /* 存储指针的动态数组,每个指针指向ngx_http_core_srv_conf_t结构体的指针,也就是其成员
+     * 类型为ngx_http_core_srv_conf_t** */
     ngx_array_t                servers;         /* ngx_http_core_srv_conf_t */
 
     ngx_http_phase_engine_t    phase_engine;
@@ -174,6 +176,7 @@ typedef struct {
     ngx_array_t                 server_names;
 
     /* server ctx */
+    /* 指向当前server块所属的ngx_http_ctx_t结构体 */
     ngx_http_conf_ctx_t        *ctx;
 
     ngx_str_t                   server_name;
@@ -290,6 +293,7 @@ typedef struct {
 
 
 struct ngx_http_core_loc_conf_s {
+    /* location的名称,即nginx.conf中location后的表达式 */
     ngx_str_t     name;          /* location name */
 
 #if (NGX_PCRE)
@@ -317,6 +321,8 @@ struct ngx_http_core_loc_conf_s {
 #endif
 
     /* pointer to the modules' loc_conf */
+    /* 指向所属的location块内ngx_http_conf_ctx_t结构体中的loc_conf指针数组,它保存着当前location块内
+     * 所有HTTP模块create_loc_conf方法产生的结构体指针 */
     void        **loc_conf;
 
     uint32_t      limit_except;
@@ -434,14 +440,21 @@ typedef struct {
 
 
 struct ngx_http_location_tree_node_s {
+    /* 左子树 */
     ngx_http_location_tree_node_t   *left;
+    /* 右子树 */
     ngx_http_location_tree_node_t   *right;
+    /* 无法完全匹配的location组成的树 */
     ngx_http_location_tree_node_t   *tree;
-
+    /* 如果location对应的URL匹配字符串属于能够完全匹配的类型,则exact指向其对应的ngx_http_core_loc_conf_t
+     * 结构体,否则为NULL */
     ngx_http_core_loc_conf_t        *exact;
+    /* 如果location对应的URL匹配字符串属于无法完全匹配的类型,则inclusive指向其对应的ngx_http_core_loc_conf_t
+     * 结构体,否则为NULL */
     ngx_http_core_loc_conf_t        *inclusive;
-
+    /* 自动重定向标志 */
     u_char                           auto_redirect;
+    /* name字符串的实际长度 */
     u_char                           len;
     u_char                           name[1];
 };

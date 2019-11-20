@@ -2637,12 +2637,13 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     if (ctx == NULL) {
         return NGX_CONF_ERROR;
     }
-
+    /* http_ctx是 */
     http_ctx = cf->ctx;
+    /* main_conf指向所属的http块下ngx_http_conf_ctx_t结构体的main_conf指针 */
     ctx->main_conf = http_ctx->main_conf;
 
     /* the server{}'s srv_conf */
-
+    /* srv_conf以及loc_conf都需要重新分配指针数组 */
     ctx->srv_conf = ngx_pcalloc(cf->pool, sizeof(void *) * ngx_http_max_module);
     if (ctx->srv_conf == NULL) {
         return NGX_CONF_ERROR;
@@ -2701,6 +2702,7 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     /* parse inside server{} */
 
     pcf = *cf;
+    /* 这里应该是递归下降在解析,将这里创建的ctx传递给下一步 */
     cf->ctx = ctx;
     cf->cmd_type = NGX_HTTP_SRV_CONF;
 
@@ -2742,7 +2744,9 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     return rv;
 }
 
-
+/*
+ * 解析loc级别的配置项
+ */
 static char *
 ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
 {
@@ -2760,8 +2764,10 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     if (ctx == NULL) {
         return NGX_CONF_ERROR;
     }
-
+    /* 注意这个ctx,这是上一个server块在解析的时候传递下来的 */
     pctx = cf->ctx;
+    /* main_conf以及srv_conf都将指向所属server块下的ngx_http_conf_ctx_t
+     * 结构体的main_conf以及srv_conf指针数组 */
     ctx->main_conf = pctx->main_conf;
     ctx->srv_conf = pctx->srv_conf;
 
@@ -2769,7 +2775,7 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     if (ctx->loc_conf == NULL) {
         return NGX_CONF_ERROR;
     }
-
+    /* loc可以嵌套下去 */
     for (i = 0; ngx_modules[i]; i++) {
         if (ngx_modules[i]->type != NGX_HTTP_MODULE) {
             continue;

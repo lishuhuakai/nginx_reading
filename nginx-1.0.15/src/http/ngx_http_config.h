@@ -30,14 +30,17 @@ typedef struct {
 
 
 typedef struct {
-    /* 解析配置文件前调用 */
+    /* 解析http{...}内的配置项前回调 */
     ngx_int_t   (*preconfiguration)(ngx_conf_t *cf);
-    /* 完成配置文件的解析后调用 */
+    /* 解析完http{...}内的所有配置项后回调 */
     ngx_int_t   (*postconfiguration)(ngx_conf_t *cf);
-
+    /* 创建用于存储HTTP全局配置项的结构体,该结构体中的成员将保存只属于http{}块
+     * 内的配置项参数,它会在解析main配置项前调用 */
     void       *(*create_main_conf)(ngx_conf_t *cf);
+    /* 解析完main配置项后调用 */
     char       *(*init_main_conf)(ngx_conf_t *cf, void *conf);
-
+    /* 创建用于存储可同时出现在main,srv级别配置项的结构体,该结构体中的成员与server配置是
+     * 相关联的 */
     void       *(*create_srv_conf)(ngx_conf_t *cf);
     char       *(*merge_srv_conf)(ngx_conf_t *cf, void *prev, void *conf);
 
