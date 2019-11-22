@@ -99,7 +99,8 @@ static uint32_t  usual[] = {
 
 
 /* gcc, icc, msvc and others compile these switches as an jump table */
-
+/* 解析请求行
+ * GET /uri HTTP/1.1 */
 ngx_int_t
 ngx_http_parse_request_line(ngx_http_request_t *r, ngx_buf_t *b)
 {
@@ -750,7 +751,7 @@ done:
     return NGX_OK;
 }
 
-
+/* 解析HTTP头部 */
 ngx_int_t
 ngx_http_parse_header_line(ngx_http_request_t *r, ngx_buf_t *b,
     ngx_uint_t allow_underscores)
@@ -795,11 +796,11 @@ ngx_http_parse_header_line(ngx_http_request_t *r, ngx_buf_t *b,
             r->invalid_header = 0;
 
             switch (ch) {
-            case CR:
+            case CR: /* 回车 */
                 r->header_end = p;
                 state = sw_header_almost_done;
                 break;
-            case LF:
+            case LF: /* 换行 */
                 r->header_end = p;
                 goto header_done;
             default:
@@ -850,7 +851,8 @@ ngx_http_parse_header_line(ngx_http_request_t *r, ngx_buf_t *b,
             }
 
             if (ch == ':') {
-                r->header_name_end = p;
+                r->header_name_end = p; /* 头部name的最后一个字符 */
+                /* 进入下一个状态 */
                 state = sw_space_before_value;
                 break;
             }

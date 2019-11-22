@@ -119,19 +119,33 @@ typedef enum {
 
 typedef struct ngx_http_phase_handler_s  ngx_http_phase_handler_t;
 
+/* 一个HTTP处理阶段中的checker检查方法,仅可以由HTTP框架实现,以此控制HTTP请求的处理流程. */
 typedef ngx_int_t (*ngx_http_phase_handler_pt)(ngx_http_request_t *r,
     ngx_http_phase_handler_t *ph);
 
 struct ngx_http_phase_handler_s {
+    /* 在处理到某一个HTTP阶段时,HTTP框架将会在checker方法已实现的前提下首先调用checker
+     * 方法来处理请求,而不会直接调用任何阶段中的handler方法,只有在checker方法中才会去调用
+     * handler方法.因此,事实上所有的checker方法都是由框架中的ngx_http_core_module模块实现
+     * 的,且普通的HTTP模块无法重定义checker方法 */
     ngx_http_phase_handler_pt  checker;
+    /* 除了ngx_http_core_module模块以外的HTTP模块,只能通过定义handler方法才能介入其中某一个
+     * HTTP处理阶段以处理请求 */
     ngx_http_handler_pt        handler;
+    /* next的设计使得处理阶段不必按顺序依次执行,既可以向后跳跃数个阶段继续执行,也可以跳跃到之前
+     * 曾经执行过的某个阶段重新执行,通常,next表示下一个处理阶段中的第一个ngx_http_phase_handler_t
+     * 处理方法 */
     ngx_uint_t                 next;
 };
 
 
 typedef struct {
+    /* handlers是由ngx_http_phase_handler_t组成的数组首地址,它表示一个请求可能经历的所有
+     * ngx_http_handler_pt处理方法 */
     ngx_http_phase_handler_t  *handlers;
     ngx_uint_t                 server_rewrite_index;
+    /* 表示NGX_HTTP_REWRITE_PHASE阶段第一个ngx_http_phase_handler_t处理方法在handlers数组中的序号
+     * 用于在执行HTTP请求的任何阶段中快速跳转到NGX_REWRITE_PHASE阶段处理请求 */
     ngx_uint_t                 location_rewrite_index;
 } ngx_http_phase_engine_t;
 

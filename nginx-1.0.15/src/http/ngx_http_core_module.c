@@ -880,25 +880,25 @@ ngx_http_core_generic_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "generic phase: %ui", r->phase_handler);
-
+    /* 调用这一阶段中,各HTTP模块添加的handler处理方法 */
     rc = ph->handler(r);
-
+    /* 返回OK,就进入下一个状态 */
     if (rc == NGX_OK) {
         r->phase_handler = ph->next;
         return NGX_AGAIN;
     }
-
+    /* 返回DECLINED,那么将进入下一个处理方法,这个处理方法极可能属于当前阶段,也可能属于下一个阶段 */
     if (rc == NGX_DECLINED) {
         r->phase_handler++;
         return NGX_AGAIN;
     }
-
+    /* 返回AGAIN或者DONE,那么当前请求将仍然停留在这一个处理阶段中 */
     if (rc == NGX_AGAIN || rc == NGX_DONE) {
         return NGX_OK;
     }
 
     /* rc == NGX_ERROR || rc == NGX_HTTP_...  */
-
+    /* 如果返回ERROR等,结束请求 */
     ngx_http_finalize_request(r, rc);
 
     return NGX_OK;

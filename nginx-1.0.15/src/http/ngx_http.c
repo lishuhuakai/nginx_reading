@@ -78,7 +78,7 @@ ngx_str_t  ngx_http_html_default_types[] = {
     ngx_null_string
 };
 
-
+/* 当配置文件中出现了http{}配置块的时候,就会回调ngx_http_block函数 */
 static ngx_command_t  ngx_http_commands[] = {
 
     { ngx_string("http"),
@@ -114,7 +114,9 @@ ngx_module_t  ngx_http_module = {
     NGX_MODULE_V1_PADDING
 };
 
-
+/*
+ * 此函数为HTTP框架的初始化函数
+ */
 static char *
 ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -133,7 +135,7 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     if (ctx == NULL) {
         return NGX_CONF_ERROR;
     }
-
+    /* 记录下ctx */
     *(ngx_http_conf_ctx_t **) conf = ctx;
 
 
@@ -144,7 +146,7 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         if (ngx_modules[m]->type != NGX_HTTP_MODULE) {
             continue;
         }
-
+        /* 从0开始,依次递增地设置所有HTTP模块的ctx_index字段 */
         ngx_modules[m]->ctx_index = ngx_http_max_module++;
     }
 
@@ -233,9 +235,10 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     /* parse inside the http{} block */
-
+    /* 解析http{}块下的main级别配置项 */
     cf->module_type = NGX_HTTP_MODULE;
     cf->cmd_type = NGX_HTTP_MAIN_CONF;
+    /* 这个应该是递归下降来解析的 */
     rv = ngx_conf_parse(cf, NULL);
 
     if (rv != NGX_CONF_OK) {
@@ -275,7 +278,7 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 
     /* create location trees */
-
+    /* 构建由location块构造的静态平衡二叉树 */
     for (s = 0; s < cmcf->servers.nelts; s++) {
 
         clcf = cscfp[s]->ctx->loc_conf[ngx_http_core_module.ctx_index];
@@ -331,7 +334,7 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 
     /* optimize the lists of ports, addresses and server names */
-
+    /* 构造监听端口与server间的关联关系,设置新连接时间的回调方法为ngx_http_init_connection */
     if (ngx_http_optimize_servers(cf, cmcf, cmcf->ports) != NGX_OK) {
         return NGX_CONF_ERROR;
     }

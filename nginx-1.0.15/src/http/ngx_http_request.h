@@ -343,18 +343,27 @@ struct ngx_http_posted_request_s {
 typedef ngx_int_t (*ngx_http_handler_pt)(ngx_http_request_t *r);
 typedef void (*ngx_http_event_handler_pt)(ngx_http_request_t *r);
 
-
+/* HTTP请求的抽象 */
 struct ngx_http_request_s {
     uint32_t                          signature;         /* "HTTP" */
-
+    /* 这个请求对应的客户端连接 */
     ngx_connection_t                 *connection;
-
+    /* 指向存放所有HTTP模块的上下文结构的指针数组 */
     void                            **ctx;
+    /* 指向请求对应的存放main级别配置结构体的指针数组 */
     void                            **main_conf;
+    /* 指向请求对应的存放srv级别配置结构体的指针数组 */
     void                            **srv_conf;
+    /* 指向请求对应的存放loc级别配置结构体的指针数组 */
     void                            **loc_conf;
-
+    /* 在接收完HTTP头部,第一次在业务上处理HTTP请求时,HTTP框架提供的处理方法是ngx_http_process_request
+     * 但是如果该方法无法一次处理完该请求的全部业务,在归还控制权到epoll事件模块后,该请求再次被回调时,
+     * 将通过ngx_http_request_handler方法来处理,而这个方法中对于可读事件的处理就是调用read_event_handler
+     * 处理请求.也就是说,HTTP模块希望底层处理请求的读事件时,重新实现read_event_handler方法
+     */
     ngx_http_event_handler_pt         read_event_handler;
+    /* 与read_event_handler回调方法类似,如果ngx_http_request_handler方法判断当前事件是可写事件,则调用
+     * read_event_handler处理请求*/
     ngx_http_event_handler_pt         write_event_handler;
 
 #if (NGX_HTTP_CACHE)
@@ -364,16 +373,23 @@ struct ngx_http_request_s {
     ngx_http_upstream_t              *upstream;
     ngx_array_t                      *upstream_states;
                                          /* of ngx_http_upstream_state_t */
-
+    /* 表示这个请求的内存池,在ngx_http_free_request方法中销毁,它与ngx_connection_t中的内存池意义不一样
+    * 当请求释放时,TCP连接可能并没有关闭,这是请求的内存池会销毁,但是ngx_connection_t的内存池不会销毁 */
     ngx_pool_t                       *pool;
+    /* 用于接收HTTP请求内容的缓冲区,主要用于接收HTTP头部 */
     ngx_buf_t                        *header_in;
-
+    /* ngx_http_process_request_headers方法在接收,解析完HTTP请求的头部后,会把解析完的每一个HTTP头部
+     * 加入到header_in的hearders链表中,同时会构造headers_in中的其他成员 */
     ngx_http_headers_in_t             headers_in;
+    /* HTTp模块会把想要发送的HTTP响应消息放到headers_out中,期望HTTP框架将headers_out中的成员序列化为
+     * HTTP响应包发送给用户 */
     ngx_http_headers_out_t            headers_out;
-
+    /* 接收HTTP请求中包体的数据结构 */
     ngx_http_request_body_t          *request_body;
-
+    /* 延迟关闭连接的时间 */
     time_t                            lingering_time;
+    /* 当前请求初始化的时间,start_sec是格林威治时间到当前时间的秒数.如果这个请求是子请求,则该时间是子请求生
+    * 成的时间,如果这个请求是用户发来的请求,则是在建立起TCP连接后,第一次接受到可读事件的时间 */
     time_t                            start_sec;
     ngx_msec_t                        start_msec;
 
@@ -388,8 +404,12 @@ struct ngx_http_request_s {
 
     ngx_str_t                         method_name;
     ngx_str_t                         http_protocol;
-
+    /* 表示需要发送给客户端的HTTP响应,out中保存着有headers_out中序列化后的表示HTTP头部的TCP流
+    * 在调用ngx_http_output_filter方法后,out中还会保存待发送的HTTP包体,它是实现异步发送HTTP响应
+    * 的关键 */
     ngx_chain_t                      *out;
+    /* 当前请求即可能是用户发来的请求,也可能是派生出的子请求,而main则标识一系列相关的派生子请求
+     * 的原始请求,我们一般可通过main和当前请求的地址是否相等来拍段当前请求是否为用户发来的原始请求 */
     ngx_http_request_t               *main;
     ngx_http_request_t               *parent;
     ngx_http_postponed_request_t     *postponed;
@@ -522,7 +542,7 @@ struct ngx_http_request_s {
 #endif
 
     /* used to parse HTTP headers */
-
+    /* 状态机解析HTTP时使用state来表示当前解析状态 */
     ngx_uint_t                        state;
 
     ngx_uint_t                        header_hash;

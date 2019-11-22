@@ -178,7 +178,10 @@ ngx_http_header_t  ngx_http_headers_in[] = {
     { ngx_null_string, 0, NULL }
 };
 
-
+/*
+ * HTTP框架处理请求的第一步
+ * @c 新建立的连接
+ */
 void
 ngx_http_init_connection(ngx_connection_t *c)
 {
@@ -203,13 +206,14 @@ ngx_http_init_connection(ngx_connection_t *c)
     c->log_error = NGX_ERROR_INFO;
 
     rev = c->read;
+    /* 如果读取到了,处理方法为ngx_http_init_request */
     rev->handler = ngx_http_init_request;
     c->write->handler = ngx_http_empty_handler;
 
 #if (NGX_STAT_STUB)
     (void) ngx_atomic_fetch_add(ngx_stat_reading, 1);
 #endif
-
+    /* 如果此连接对应的套接字缓存上已经有用户发来的数据,调用ngx_http_init_reqest方法 */
     if (rev->ready) {
         /* the deferred accept(), rtsig, aio, iocp */
 
@@ -221,9 +225,10 @@ ngx_http_init_connection(ngx_connection_t *c)
         ngx_http_init_request(rev);
         return;
     }
-
+    /* 加入定时器,如果post_accetp_timeout时间之后,仍然没有用户数据到达,那么会由定时器触发调用
+     * 读事件的ngx_http_init_request方法 */
     ngx_add_timer(rev, c->listening->post_accept_timeout);
-
+    /* 将读事件加入epoll */
     if (ngx_handle_read_event(rev, 0) != NGX_OK) {
 #if (NGX_STAT_STUB)
         (void) ngx_atomic_fetch_add(ngx_stat_reading, -1);
@@ -233,7 +238,8 @@ ngx_http_init_connection(ngx_connection_t *c)
     }
 }
 
-
+/* tcp连接上第一次出现了可读事件,将会调用此函数
+ */
 static void
 ngx_http_init_request(ngx_event_t *rev)
 {
@@ -260,7 +266,7 @@ ngx_http_init_request(ngx_event_t *rev)
 #endif
 
     c = rev->data;
-
+    /* 如果发现用户已经超时,那么关闭连接,不再处理 */
     if (rev->timedout) {
         ngx_log_error(NGX_LOG_INFO, c->log, NGX_ETIMEDOUT, "client timed out");
 
@@ -281,7 +287,7 @@ ngx_http_init_request(ngx_event_t *rev)
     }
 
     r = hc->request;
-
+    /* 构建一个http_request结构,所有的http模块都以此作为核心结构体来处理请求 */
     if (r) {
         ngx_memzero(r, sizeof(ngx_http_request_t));
 
@@ -300,7 +306,7 @@ ngx_http_init_request(ngx_event_t *rev)
 
         hc->request = r;
     }
-
+    /* 将http_request这个结构体放到ngx_connection_t结构体中的data成员上 */
     c->data = r;
     r->http_connection = hc;
 
@@ -382,16 +388,16 @@ ngx_http_init_request(ngx_event_t *rev)
             break;
         }
     }
-
+    /* 虚拟主机的名称 */
     r->virtual_names = addr_conf->virtual_names;
 
     /* the default server configuration for the address:port */
     cscf = addr_conf->default_server;
-
+    /* 开始遍历配置项了 */
     r->main_conf = cscf->ctx->main_conf;
     r->srv_conf = cscf->ctx->srv_conf;
     r->loc_conf = cscf->ctx->loc_conf;
-
+    /* 第一次读事件的回调函数是ngx_http_process_request_line */
     rev->handler = ngx_http_process_request_line;
     r->read_event_handler = ngx_http_block_reading;
 
@@ -438,6 +444,7 @@ ngx_http_init_request(ngx_event_t *rev)
     }
 
     if (c->buffer == NULL) {
+        /* 创建一个缓存,用于接收内核缓冲区上的TCP流 */
         c->buffer = ngx_create_temp_buf(c->pool,
                                         cscf->client_header_buffer_size);
         if (c->buffer == NULL) {
@@ -490,7 +497,7 @@ ngx_http_init_request(ngx_event_t *rev)
     r->count = 1;
 
     tp = ngx_timeofday();
-    r->start_sec = tp->sec;
+    r->start_sec = tp->sec; /* 记录请求开始处理的时间 */
     r->start_msec = tp->msec;
 
     r->method = NGX_HTTP_UNKNOWN;
@@ -701,7 +708,7 @@ ngx_http_ssl_servername(ngx_ssl_conn_t *ssl_conn, int *ad, void *arg)
 
 #endif
 
-
+/* 接收http请求行 */
 static void
 ngx_http_process_request_line(ngx_event_t *rev)
 {
@@ -717,7 +724,7 @@ ngx_http_process_request_line(ngx_event_t *rev)
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, rev->log, 0,
                    "http process request line");
-
+    /* 首先检查读事件是否已经超时,超时时间是nginx.conf配置文件中指定的client_header_timeout */
     if (rev->timedout) {
         ngx_log_error(NGX_LOG_INFO, c->log, NGX_ETIMEDOUT, "client timed out");
         c->timedout = 1;
@@ -740,7 +747,7 @@ ngx_http_process_request_line(ngx_event_t *rev)
         rc = ngx_http_parse_request_line(r, r->header_in);
 
         if (rc == NGX_OK) {
-
+            /* 解析成功 */
             /* the request line has been parsed successfully */
 
             r->request_line.len = r->request_end - r->request_start;
@@ -909,7 +916,7 @@ ngx_http_process_request_line(ngx_event_t *rev)
             }
 
             c->log->action = "reading client request headers";
-
+            /* 因为已经处理了HTTP头部,因此将读事件的回调更换 */
             rev->handler = ngx_http_process_request_headers;
             ngx_http_process_request_headers(rev);
 
@@ -950,7 +957,9 @@ ngx_http_process_request_line(ngx_event_t *rev)
     }
 }
 
-
+/*
+ * 接收HTTP头部
+ */
 static void
 ngx_http_process_request_headers(ngx_event_t *rev)
 {
@@ -970,14 +979,14 @@ ngx_http_process_request_headers(ngx_event_t *rev)
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, rev->log, 0,
                    "http process request header line");
-
+    /* 检查超时 */
     if (rev->timedout) {
         ngx_log_error(NGX_LOG_INFO, c->log, NGX_ETIMEDOUT, "client timed out");
         c->timedout = 1;
         ngx_http_close_request(r, NGX_HTTP_REQUEST_TIME_OUT);
         return;
     }
-
+    /* 获取配置项 */
     cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
     cscf = ngx_http_get_module_srv_conf(r, ngx_http_core_module);
 
@@ -987,7 +996,7 @@ ngx_http_process_request_headers(ngx_event_t *rev)
 
         if (rc == NGX_AGAIN) {
 
-            if (r->header_in->pos == r->header_in->end) {
+            if (r->header_in->pos == r->header_in->end) { /* 缓冲区已经耗尽 */
 
                 rv = ngx_http_alloc_large_header_buffer(r, 0);
 
@@ -996,7 +1005,7 @@ ngx_http_process_request_headers(ngx_event_t *rev)
                     return;
                 }
 
-                if (rv == NGX_DECLINED) {
+                if (rv == NGX_DECLINED) { /* 已经到达缓冲区大小的上限,无法分配更大内存 */
                     p = r->header_name_start;
 
                     r->lingering_close = 1;
@@ -1025,7 +1034,7 @@ ngx_http_process_request_headers(ngx_event_t *rev)
                     return;
                 }
             }
-
+            /* 将数据读取到缓冲区中 */
             n = ngx_http_read_request_header(r);
 
             if (n == NGX_AGAIN || n == NGX_ERROR) {
@@ -1036,7 +1045,7 @@ ngx_http_process_request_headers(ngx_event_t *rev)
         rc = ngx_http_parse_header_line(r, r->header_in,
                                         cscf->underscores_in_headers);
 
-        if (rc == NGX_OK) {
+        if (rc == NGX_OK) { /* 返回NGX_OK,表示成功解析出一行HTTP头部 */
 
             if (r->invalid_header && cscf->ignore_invalid_headers) {
 
@@ -1060,11 +1069,11 @@ ngx_http_process_request_headers(ngx_event_t *rev)
             h->hash = r->header_hash;
 
             h->key.len = r->header_name_end - r->header_name_start;
-            h->key.data = r->header_name_start;
+            h->key.data = r->header_name_start; /* 记录下name */
             h->key.data[h->key.len] = '\0';
 
             h->value.len = r->header_end - r->header_start;
-            h->value.data = r->header_start;
+            h->value.data = r->header_start; /* 记录下value */
             h->value.data[h->value.len] = '\0';
 
             h->lowcase_key = ngx_pnalloc(r->pool, h->key.len);
@@ -1094,7 +1103,7 @@ ngx_http_process_request_headers(ngx_event_t *rev)
             continue;
         }
 
-        if (rc == NGX_HTTP_PARSE_HEADER_DONE) {
+        if (rc == NGX_HTTP_PARSE_HEADER_DONE) { /* 头部已经解析完成了 */
 
             /* a whole header has been parsed successfully */
 
@@ -1110,7 +1119,7 @@ ngx_http_process_request_headers(ngx_event_t *rev)
             if (rc != NGX_OK) {
                 return;
             }
-
+            /* 开始使用各个HTTP模块正式地在业务上处理HTTP请求 */
             ngx_http_process_request(r);
 
             return;
@@ -1134,7 +1143,7 @@ ngx_http_process_request_headers(ngx_event_t *rev)
     }
 }
 
-
+/* 读取请求行 */
 static ssize_t
 ngx_http_read_request_header(ngx_http_request_t *r)
 {
