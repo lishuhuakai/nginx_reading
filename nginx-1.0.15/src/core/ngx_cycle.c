@@ -107,7 +107,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         ngx_destroy_pool(pool);
         return NULL;
     }
-
+    /* 配置文件所在的路径 */
     cycle->conf_file.len = old_cycle->conf_file.len;
     cycle->conf_file.data = ngx_pnalloc(pool, old_cycle->conf_file.len + 1);
     if (cycle->conf_file.data == NULL)
@@ -210,7 +210,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
-
+    /* 获取主机名称 */
     if (gethostname(hostname, NGX_MAXHOSTNAMELEN) == -1)
     {
         ngx_log_error(NGX_LOG_EMERG, log, ngx_errno, "gethostname() failed");
@@ -275,7 +275,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     }
 
 
-    conf.ctx = cycle->conf_ctx;
+    conf.ctx = cycle->conf_ctx; /* 上下文 */
     conf.cycle = cycle;
     conf.pool = pool;
     conf.log = log;

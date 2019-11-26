@@ -810,7 +810,7 @@ ngx_http_handler(ngx_http_request_t *r)
     r->connection->log->action = NULL;
 
     r->connection->unexpected_eof = 0;
-
+    /* 检查internal标志位,如果internal为0 ,表示不需要重定向*/
     if (!r->internal) {
         switch (r->headers_in.connection_type) {
         case 0:
@@ -827,9 +827,9 @@ ngx_http_handler(ngx_http_request_t *r)
         }
 
         r->lingering_close = (r->headers_in.content_length_n > 0);
-        r->phase_handler = 0;
+        r->phase_handler = 0; /* phase_handler为0,表示从ngx_http_phase_engine_t数组的第一个回调方法开始执行 */
 
-    } else {
+    } else { /* internal为1,表示请求当前需要做内部跳转 */
         cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
         r->phase_handler = cmcf->phase_engine.server_rewrite_index;
     }
@@ -845,7 +845,9 @@ ngx_http_handler(ngx_http_request_t *r)
     ngx_http_core_run_phases(r);
 }
 
-
+/*
+ * 此方法开始调用各个HTTP模块来共同处理请求
+ */
 void
 ngx_http_core_run_phases(ngx_http_request_t *r)
 {
@@ -1070,6 +1072,9 @@ ngx_http_core_post_rewrite_phase(ngx_http_request_t *r,
 }
 
 
+/*
+ * NGX_HTTP_ACCESS_PHASE阶段的处理方法
+ */
 ngx_int_t
 ngx_http_core_access_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
 {
@@ -2617,7 +2622,8 @@ ngx_http_cleanup_add(ngx_http_request_t *r, size_t size)
 
 
 /*
- * 解析server{}配置块
+ * 解析配置项的时候,一旦解析server{}块,会立刻调用这个函数来进行相关的解析工作
+ * cf为parse的上下文
  */
 static char *
 ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
@@ -2637,7 +2643,7 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     if (ctx == NULL) {
         return NGX_CONF_ERROR;
     }
-    /* http_ctx是 */
+    /* http_ctx是解析http{}块时传递下来的ctx */
     http_ctx = cf->ctx;
     /* main_conf指向所属的http块下ngx_http_conf_ctx_t结构体的main_conf指针 */
     ctx->main_conf = http_ctx->main_conf;
@@ -2686,11 +2692,12 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     /* the server configuration context */
     /* 解析当前server{}块内的所有配置项 */
     cscf = ctx->srv_conf[ngx_http_core_module.ctx_index];
+    /* 在ctx域记录下在此函数中分配的ngx_http_conf_ctx_t结构体 */
     cscf->ctx = ctx;
 
 
     cmcf = ctx->main_conf[ngx_http_core_module.ctx_index];
-    /* 将配置项压入 */
+    /* 将配置项压入ngx_http_core_main_conf_t的servers数组中 */
     cscfp = ngx_array_push(&cmcf->servers);
     if (cscfp == NULL) {
         return NGX_CONF_ERROR;
@@ -2703,9 +2710,9 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
 
     pcf = *cf;
     /* 这里应该是递归下降在解析,将这里创建的ctx传递给下一步 */
-    cf->ctx = ctx;
+    cf->ctx = ctx; /* ctx是这个函数中创建的ctx */
     cf->cmd_type = NGX_HTTP_SRV_CONF;
-
+    /* 递归下降继续解析 */
     rv = ngx_conf_parse(cf, NULL);
 
     *cf = pcf;
@@ -2744,8 +2751,7 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     return rv;
 }
 
-/*
- * 解析loc级别的配置项
+/* 解析配置项的时候,如果碰到了location{}块,立即调用此函数
  */
 static char *
 ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
@@ -2764,7 +2770,7 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     if (ctx == NULL) {
         return NGX_CONF_ERROR;
     }
-    /* 注意这个ctx,这是上一个server块在解析的时候传递下来的 */
+    /* 注意这个ctx,这是上一个server块或者loc块在解析的时候传递下来的 */
     pctx = cf->ctx;
     /* main_conf以及srv_conf都将指向所属server块下的ngx_http_conf_ctx_t
      * 结构体的main_conf以及srv_conf指针数组 */
@@ -2791,8 +2797,11 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
             }
         }
     }
-
+    /* 第一个http模块是ngx_http_core_module,它会创建一个类型为ngx_http_core_loc_conf_t的结构
+     * core loc conf
+     */
     clcf = ctx->loc_conf[ngx_http_core_module.ctx_index];
+    /* 指向loc块对应的loc_conf数组 */
     clcf->loc_conf = ctx->loc_conf;
 
     value = cf->args->elts;
@@ -2806,7 +2815,7 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
         if (len == 1 && mod[0] == '=') {
 
             clcf->name = *name;
-            clcf->exact_match = 1;
+            clcf->exact_match = 1; /* 完全匹配 */
 
         } else if (len == 2 && mod[0] == '^' && mod[1] == '~') {
 
@@ -2876,7 +2885,7 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
             }
         }
     }
-
+    /* server块对应的loc_conf数组 */
     pclcf = pctx->loc_conf[ngx_http_core_module.ctx_index];
 
     if (pclcf->name.len) {
@@ -2926,18 +2935,19 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
             return NGX_CONF_ERROR;
         }
     }
-
+    /* 让上一层(server或者loc)的ngx_http_core_loc_conf_t的locations后面
+     * 链上本loc层的ngx_http_core_loc_conf_t */
     if (ngx_http_add_location(cf, &pclcf->locations, clcf) != NGX_OK) {
         return NGX_CONF_ERROR;
     }
 
-    save = *cf;
+    save = *cf; /* 保存上下文环境 */
     cf->ctx = ctx;
     cf->cmd_type = NGX_HTTP_LOC_CONF;
 
     rv = ngx_conf_parse(cf, NULL);
 
-    *cf = save;
+    *cf = save; /* 将上下文环境还原回来  */
 
     return rv;
 }

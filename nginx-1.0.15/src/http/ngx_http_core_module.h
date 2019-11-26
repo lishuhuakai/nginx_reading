@@ -98,10 +98,11 @@ typedef struct {
 
 
 typedef enum {
+    /* 在接收到完整的HTTP头部后处理的HTTP阶段 */
     NGX_HTTP_POST_READ_PHASE = 0,
-
+    /* 在还没有查询到URI匹配的location前,这时rewrite重写URI也作为一个独立的HTTP阶段 */
     NGX_HTTP_SERVER_REWRITE_PHASE,
-
+    /* 根据URI寻找匹配的location,这个阶段通常由ngx_http_core_module模块实现,不建议其他模块重新定义这一阶段的行为 */
     NGX_HTTP_FIND_CONFIG_PHASE,
     NGX_HTTP_REWRITE_PHASE,
     NGX_HTTP_POST_REWRITE_PHASE,
@@ -433,7 +434,8 @@ struct ngx_http_core_loc_conf_s {
 
     ngx_uint_t    types_hash_max_size;
     ngx_uint_t    types_hash_bucket_size;
-
+    /* 当同一个server块内多个表达location块的ngx_http_core_loc_conf_t结构体以双向链表组织起来
+    * 该locations指针将指向ngx_http_location_queue_t结构体 */
     ngx_queue_t  *locations;
 
 #if 0

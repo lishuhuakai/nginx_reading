@@ -15,7 +15,12 @@ ngx_uint_t  ngx_file_aio = 1;
 
 #endif
 
-
+/* 读取文件
+ * @file 文件相关的信息
+ * @buf 缓冲区
+ * @len 期望读取的长度
+ * @offset 偏移量,从偏移量处开始读取
+ */
 ssize_t
 ngx_read_file(ngx_file_t *file, u_char *buf, size_t size, off_t offset)
 {
@@ -53,7 +58,7 @@ ngx_read_file(ngx_file_t *file, u_char *buf, size_t size, off_t offset)
                       "read() \"%s\" failed", file->name.data);
         return NGX_ERROR;
     }
-
+    /* 记录文件偏移量 */
     file->sys_offset += n;
 
 #endif

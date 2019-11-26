@@ -115,7 +115,7 @@ ngx_module_t  ngx_http_module = {
 };
 
 /*
- * 此函数为HTTP框架的初始化函数
+ * 此函数为HTTP框架的初始化函数,解析配置文件的时候,
  */
 static char *
 ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
@@ -591,7 +591,7 @@ ngx_http_merge_servers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf,
         if (module->merge_srv_conf) {
             /* 注意,在这里合并配置项时,saved.srv_conf[ctx_index]参数是当前HTTP模块在http{}
              * 块下由create_srv_conf方法创建的结构体, 而cscfp[s]->ctx->srv_conf[ctx_index]
-             * 参数则是在server{}块下有create_srv_conf方法创建的结构体 */
+             * 参数则是在server{}块由有create_srv_conf方法创建的结构体 */
             rv = module->merge_srv_conf(cf, saved.srv_conf[ctx_index],
                                         cscfp[s]->ctx->srv_conf[ctx_index]);
             if (rv != NGX_CONF_OK) {

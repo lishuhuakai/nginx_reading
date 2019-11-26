@@ -164,10 +164,12 @@ typedef struct {
     ngx_uint_t                        offset;
 } ngx_http_header_out_t;
 
-
+/* 记录已经解析过的HTTP头部 */
 typedef struct {
+/* 所有解析过的HTTP头部都在headers链表中,链表的每个元素的类型为ngx_table_elt_t */
     ngx_list_t                        headers;
-
+    /* 下面的每个ngx_table_elt_t成员都是RFC2616规范中定义的HTTP头部,它们实际都指向headers链表
+     * 中的相应成员, 当它们为NULL时,代表没有解析到相应的HTTP头部 */
     ngx_table_elt_t                  *host;
     ngx_table_elt_t                  *connection;
     ngx_table_elt_t                  *if_modified_since;

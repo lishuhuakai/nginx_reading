@@ -1599,7 +1599,9 @@ ngx_http_process_request_header(ngx_http_request_t *r)
     return NGX_OK;
 }
 
-
+/*
+ * 处理请求
+ */
 static void
 ngx_http_process_request(ngx_http_request_t *r)
 {
@@ -1658,7 +1660,8 @@ ngx_http_process_request(ngx_http_request_t *r)
     }
 
 #endif
-
+    /* 由于现在已经开始准备调用各个HTTP模块处理请求了,因此不再存在接收HTTP请求头部超时问题
+     * 需要从定时器中将当前连接的读事件移除 */
     if (c->read->timer_set) {
         ngx_del_timer(c->read);
     }
@@ -1669,7 +1672,7 @@ ngx_http_process_request(ngx_http_request_t *r)
     (void) ngx_atomic_fetch_add(ngx_stat_writing, 1);
     r->stat_writing = 1;
 #endif
-
+    /* 重新设置当前连接读,写事件的回调方法 */
     c->read->handler = ngx_http_request_handler;
     c->write->handler = ngx_http_request_handler;
     r->read_event_handler = ngx_http_block_reading;
@@ -1821,6 +1824,7 @@ ngx_http_request_handler(ngx_event_t *ev)
                    "http run request: \"%V?%V\"", &r->uri, &r->args);
 
     if (ev->write) {
+        /* write_event_handler一般是ngx_http_core_run_phases */
         r->write_event_handler(r);
 
     } else {

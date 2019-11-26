@@ -98,7 +98,7 @@ ngx_conf_param(ngx_conf_t *cf)
     return rv;
 }
 
-
+/* 解析配置文件 */
 char *
 ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
 {
@@ -130,16 +130,17 @@ ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
             return NGX_CONF_ERROR;
         }
 
-        prev = cf->conf_file;
+        prev = cf->conf_file; /* 前一个配置文件项 */
 
         cf->conf_file = &conf_file;
 
+        /* 获取配置文件的相关信息 */
         if (ngx_fd_info(fd, &cf->conf_file->file.info) == -1) {
             ngx_log_error(NGX_LOG_EMERG, cf->log, ngx_errno,
                           ngx_fd_info_n " \"%s\" failed", filename->data);
         }
 
-        cf->conf_file->buffer = &buf;
+        cf->conf_file->buffer = &buf; /* 将文件内容读入buf中 */
 
         buf.start = ngx_alloc(NGX_CONF_BUFFER, cf->log);
         if (buf.start == NULL) {
@@ -285,7 +286,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
     ngx_uint_t      i, multi;
     ngx_str_t      *name;
     ngx_command_t  *cmd;
-
+    /* 设置项的名称 */
     name = cf->args->elts;
 
     multi = 0;
@@ -293,7 +294,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
     for (i = 0; ngx_modules[i]; i++) {
 
         /* look up the directive in the appropriate modules */
-
+        /* module_type指示在那个层面解析配置 */
         if (ngx_modules[i]->type != NGX_CONF_MODULE
             && ngx_modules[i]->type != cf->module_type)
         {
@@ -317,7 +318,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
 
 
             /* is the directive's location right ? */
-
+            /* 判断命令出现的位置是否正确 */
             if (!(cmd->type & cf->cmd_type)) {
                 if (cmd->type & NGX_CONF_MULTI) {
                     multi = 1;
@@ -342,7 +343,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
             }
 
             /* is the directive's argument count right ? */
-
+            /* 需要验证参数是否正确 */
             if (!(cmd->type & NGX_CONF_ANY)) {
 
                 if (cmd->type & NGX_CONF_FLAG) {
@@ -351,7 +352,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
                         goto invalid;
                     }
 
-                } else if (cmd->type & NGX_CONF_1MORE) {
+                } else if (cmd->type & NGX_CONF_1MORE) {  /* 携带的参数必须超过1个 */
 
                     if (cf->args->nelts < 2) {
                         goto invalid;
@@ -377,7 +378,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
 
             conf = NULL;
 
-            if (cmd->type & NGX_DIRECT_CONF) {
+            if (cmd->type & NGX_DIRECT_CONF) { /* 解析全局配置项 */
                 conf = ((void **) cf->ctx)[ngx_modules[i]->index];
 
             } else if (cmd->type & NGX_MAIN_CONF) {
@@ -390,7 +391,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
                     conf = confp[ngx_modules[i]->ctx_index];
                 }
             }
-
+            /* 调用相应的解析函数进行赋值 */
             rv = cmd->set(cf, cmd, conf);
 
             if (rv == NGX_CONF_OK) {
@@ -430,7 +431,9 @@ invalid:
     return NGX_ERROR;
 }
 
-
+/*
+ * 从nginx配置中读取token
+ */
 static ngx_int_t
 ngx_conf_read_token(ngx_conf_t *cf)
 {
@@ -456,13 +459,13 @@ ngx_conf_read_token(ngx_conf_t *cf)
     b = cf->conf_file->buffer;
     start = b->pos;
     start_line = cf->conf_file->line;
-
+    /* 文件大小 */
     file_size = ngx_file_size(&cf->conf_file->file.info);
 
     for ( ;; ) {
 
         if (b->pos >= b->last) {
-
+            /* 读取错误 */
             if (cf->conf_file->file.offset >= file_size) {
 
                 if (cf->args->nelts > 0) {
@@ -510,7 +513,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
             if (len) {
                 ngx_memmove(b->start, start, len);
             }
-
+            /* 还有多少字节需要读取 */
             size = (ssize_t) (file_size - cf->conf_file->file.offset);
 
             if (size > b->end - (b->start + len)) {
@@ -616,6 +619,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 return NGX_CONF_BLOCK_DONE;
 
             case '#':
+                /* 解析到了注释 */
                 sharp_comment = 1;
                 continue;
 
@@ -625,6 +629,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 continue;
 
             case '"':
+                /* 解析到了string */
                 start++;
                 d_quoted = 1;
                 last_space = 0;
@@ -664,7 +669,8 @@ ngx_conf_read_token(ngx_conf_t *cf)
                     found = 1;
                 }
 
-            } else if (s_quoted) {
+            }
+            else if (s_quoted) {
                 if (ch == '\'') {
                     s_quoted = 0;
                     need_space = 1;
@@ -683,7 +689,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 if (word == NULL) {
                     return NGX_ERROR;
                 }
-
+                /* 将参数信息拷贝进去 */
                 word->data = ngx_pnalloc(cf->pool, b->pos - start + 1);
                 if (word->data == NULL) {
                     return NGX_ERROR;
