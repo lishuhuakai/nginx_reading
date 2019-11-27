@@ -1,4 +1,5 @@
 
+/* realip模块代码量不是很大,可以仔细研读一下 */
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) Nginx, Inc.
@@ -105,6 +106,9 @@ ngx_module_t  ngx_http_realip_module = {
 };
 
 
+/*
+ * 获取请求的真实ip
+ */
 static ngx_int_t
 ngx_http_realip_handler(ngx_http_request_t *r)
 {
@@ -124,7 +128,7 @@ ngx_http_realip_handler(ngx_http_request_t *r)
     if (ctx) {
         return NGX_DECLINED;
     }
-
+    /* 获取相应的配置项 */
     rlcf = ngx_http_get_module_loc_conf(r, ngx_http_realip_module);
 
     if (rlcf->from == NULL
@@ -138,7 +142,7 @@ ngx_http_realip_handler(ngx_http_request_t *r)
 
     switch (rlcf->type) {
 
-    case NGX_HTTP_REALIP_XREALIP:
+    case NGX_HTTP_REALIP_XREALIP: /* 从X-Real-IP中获取 */
 
         if (r->headers_in.x_real_ip == NULL) {
             return NGX_DECLINED;
@@ -149,7 +153,7 @@ ngx_http_realip_handler(ngx_http_request_t *r)
 
         break;
 
-    case NGX_HTTP_REALIP_XFWD:
+    case NGX_HTTP_REALIP_XFWD: /* 从X-Forward-For中获取 */
 
         if (r->headers_in.x_forwarded_for == NULL) {
             return NGX_DECLINED;
@@ -157,8 +161,8 @@ ngx_http_realip_handler(ngx_http_request_t *r)
 
         len = r->headers_in.x_forwarded_for->value.len;
         ip = r->headers_in.x_forwarded_for->value.data;
-
-        for (p = ip + len - 1; p > ip; p--) {
+        /* 192.168.1.1,192.168.1.2 */
+        for (p = ip + len - 1; p > ip; p--) { /* 取最后一个 */
             if (*p == ' ' || *p == ',') {
                 p++;
                 len -= p - ip;
@@ -239,7 +243,7 @@ found:
     return NGX_DECLINED;
 }
 
-
+/* 设置真实的ip地址 */
 static ngx_int_t
 ngx_http_realip_set_addr(ngx_http_request_t *r, u_char *ip, size_t len)
 {
@@ -308,7 +312,7 @@ ngx_http_realip_cleanup(void *data)
     c->addr_text = ctx->addr_text;
 }
 
-
+/* 解析realip_from字段 */
 static char *
 ngx_http_realip_from(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -320,7 +324,7 @@ ngx_http_realip_from(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_realip_from_t  *from;
 
     value = cf->args->elts;
-
+/* unix域套接字 */
 #if (NGX_HAVE_UNIX_DOMAIN)
 
     if (ngx_strcmp(value[1].data, "unix:") == 0) {
@@ -361,7 +365,7 @@ ngx_http_realip_from(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         ngx_conf_log_error(NGX_LOG_WARN, cf, 0,
                            "low address bits of %V are meaningless", &value[1]);
     }
-
+    /* 设置ip地址以及掩码 */
     from->mask = cidr.u.in.mask;
     from->addr = cidr.u.in.addr;
 
@@ -369,6 +373,7 @@ ngx_http_realip_from(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
+/* 从HTTP头部的哪一个字段获取真实ip */
 static char *
 ngx_http_realip(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -422,7 +427,7 @@ ngx_http_realip_create_loc_conf(ngx_conf_t *cf)
     return conf;
 }
 
-
+/* 配置合并 */
 static char *
 ngx_http_realip_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 {
@@ -462,7 +467,7 @@ ngx_http_realip_init(ngx_conf_t *cf)
     if (h == NULL) {
         return NGX_ERROR;
     }
-
+    /* 记录下处理函数 */
     *h = ngx_http_realip_handler;
 
     h = ngx_array_push(&cmcf->phases[NGX_HTTP_PREACCESS_PHASE].handlers);

@@ -314,7 +314,7 @@ ngx_http_init_request(ngx_event_t *rev)
     r->signature = NGX_HTTP_MODULE;
 
     /* find the server configuration for the address:port */
-
+    /* 下面主要是找到对应的server{}的配置 */
     port = c->listening->servers;
 
     r->connection = c;
@@ -987,7 +987,9 @@ ngx_http_process_request_headers(ngx_event_t *rev)
         return;
     }
     /* 获取配置项 */
+    /* main配置 */
     cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
+    /* srv配置 */
     cscf = ngx_http_get_module_srv_conf(r, ngx_http_core_module);
 
     rc = NGX_AGAIN;
@@ -1531,10 +1533,11 @@ ngx_http_process_cookie(ngx_http_request_t *r, ngx_table_elt_t *h,
     return NGX_ERROR;
 }
 
-
+/* 处理请求头部 */
 static ngx_int_t
 ngx_http_process_request_header(ngx_http_request_t *r)
 {
+    /* ngx_http_find_virtual_server找到对应的虚拟主机的配置块 */
     if (ngx_http_find_virtual_server(r, r->headers_in.server.data,
                                      r->headers_in.server.len)
         == NGX_ERROR)
@@ -1739,7 +1742,10 @@ ngx_http_validate_host(ngx_http_request_t *r, u_char **host, size_t len,
     return last;
 }
 
-
+/*
+ * 找到对应的虚拟主机的配置块
+ * @host为主机名
+ */
 static ngx_int_t
 ngx_http_find_virtual_server(ngx_http_request_t *r, u_char *host, size_t len)
 {

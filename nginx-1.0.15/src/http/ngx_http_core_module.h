@@ -177,7 +177,7 @@ typedef struct {
     ngx_uint_t                 variables_hash_bucket_size;
 
     ngx_hash_keys_arrays_t    *variables_keys;
-
+    /* 存放着该http{}块配置下监听的所有ngx_http_conf_port_t端口 */
     ngx_array_t               *ports;
 
     ngx_uint_t                 try_files;       /* unsigned  try_files:1 */
@@ -256,26 +256,37 @@ typedef struct {
 
 
 typedef struct {
-    ngx_int_t                  family;
-    in_port_t                  port;
+    ngx_int_t                  family; /* socket地址家族 */
+    in_port_t                  port;  /* 监听端口 */
     ngx_array_t                addrs;     /* array of ngx_http_conf_addr_t */
 } ngx_http_conf_port_t;
 
 
 typedef struct {
+    /* 监听套接字的各种属性 */
     ngx_http_listen_opt_t      opt;
-
+    /* 以下3个散列表用于加速寻找到对应监听端口上的新连接,确定到底使用哪一个server{}
+     * 虚拟主机下的配置来处理它,所以,散列表的值就是ngx_http_core_srv_conf_t结构体的地址 */
+    /* 完全匹配server name的散列表 */
     ngx_hash_t                 hash;
+    /* 通配符前置的散列表 */
     ngx_hash_wildcard_t       *wc_head;
+    /* 通配符后置的散列表 */
     ngx_hash_wildcard_t       *wc_tail;
 
 #if (NGX_PCRE)
     ngx_uint_t                 nregex;
+    /* regex指向静态数组,其数组成员就是ngx_http_server_name_t结构体,
+     * 表示正则表达式及其匹配的server{}虚拟主机 */
     ngx_http_server_name_t    *regex;
 #endif
 
     /* the default server configuration for this address:port */
+    /* 该监听端口下对应的默认server{}虚拟主机 */
     ngx_http_core_srv_conf_t  *default_server;
+    /* servers动态数组中的成员将指向ngx_http_core_srv_conf_t结构体
+     * servers动态数组中,保存的数据类型是ngx_http_core_srv_conf_t** ,简单来说,就是
+     * 由servers数组把监听端口与server{}中的虚拟主机关联起来了 */
     ngx_array_t                servers;  /* array of ngx_http_core_srv_conf_t */
 } ngx_http_conf_addr_t;
 
