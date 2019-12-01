@@ -318,6 +318,7 @@ ngx_http_set_predicate_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
+/* 根据$出现的次数,统计出一个配置项参数中出现了多少个变量 */
 ngx_uint_t
 ngx_http_script_variables_count(ngx_str_t *value)
 {
@@ -333,6 +334,7 @@ ngx_http_script_variables_count(ngx_str_t *value)
 }
 
 
+/* 编译变量,将变量对应的回调添加到三个数组中flushes, lengths, values */
 ngx_int_t
 ngx_http_script_compile(ngx_http_script_compile_t *sc)
 {
@@ -347,7 +349,7 @@ ngx_http_script_compile(ngx_http_script_compile_t *sc)
     for (i = 0; i < sc->source->len; /* void */ ) {
 
         name.len = 0;
-
+        /* 变量以$为起始标志 */
         if (sc->source->data[i] == '$') {
 
             if (++i == sc->source->len) {
@@ -378,7 +380,7 @@ ngx_http_script_compile(ngx_http_script_compile_t *sc)
             }
             }
 #endif
-
+            /* 处理${var}www变量和字符相连*/
             if (sc->source->data[i] == '{') {
                 bracket = 1;
 
@@ -423,16 +425,16 @@ ngx_http_script_compile(ngx_http_script_compile_t *sc)
             if (name.len == 0) {
                 goto invalid_variable;
             }
-
+            /* 解析完了一个变量 */
             sc->variables++;
-
+            /* 添加变量回调 */
             if (ngx_http_script_add_var_code(sc, &name) != NGX_OK) {
                 return NGX_ERROR;
             }
 
             continue;
         }
-
+        /* uri的参数 */
         if (sc->source->data[i] == '?' && sc->compile_args) {
             sc->args = 1;
             sc->compile_args = 0;
@@ -445,7 +447,7 @@ ngx_http_script_compile(ngx_http_script_compile_t *sc)
 
             continue;
         }
-
+        /* 字符常量 */
         name.data = &sc->source->data[i];
 
         while (i < sc->source->len) {
@@ -456,7 +458,7 @@ ngx_http_script_compile(ngx_http_script_compile_t *sc)
 
             if (sc->source->data[i] == '?') {
 
-                sc->args = 1;
+                sc->args = 1; /* 带参数 */
 
                 if (sc->compile_args) {
                     break;
@@ -467,8 +469,9 @@ ngx_http_script_compile(ngx_http_script_compile_t *sc)
             name.len++;
         }
 
-        sc->size += name.len;
+        sc->size += name.len; /* 累加字符常量的长度 */
 
+        /* 添加字符常量字符串 */
         if (ngx_http_script_add_copy_code(sc, &name, (i == sc->source->len))
             != NGX_OK)
         {
@@ -486,6 +489,9 @@ invalid_variable:
 }
 
 
+/*
+ * 从配置文件中,获取配置项的值
+ */
 u_char *
 ngx_http_script_run(ngx_http_request_t *r, ngx_str_t *value,
     void *code_lengths, size_t len, void *code_values)
@@ -496,6 +502,7 @@ ngx_http_script_run(ngx_http_request_t *r, ngx_str_t *value,
     ngx_http_script_engine_t      e;
     ngx_http_core_main_conf_t    *cmcf;
 
+    /* 获取core模块的配置项 */
     cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
 
     for (i = 0; i < cmcf->variables.nelts; i++) {
@@ -512,6 +519,7 @@ ngx_http_script_run(ngx_http_request_t *r, ngx_str_t *value,
     e.flushed = 1;
 
     while (*(uintptr_t *) e.ip) {
+        /* lcode是一个回调函数 */
         lcode = *(ngx_http_script_len_code_pt *) e.ip;
         len += lcode(&e);
     }
@@ -552,7 +560,7 @@ ngx_http_script_flush_no_cacheable_variables(ngx_http_request_t *r,
     }
 }
 
-
+/* 初始化sc的三个数组 flushes, lengths, values */
 static ngx_int_t
 ngx_http_script_init_arrays(ngx_http_script_compile_t *sc)
 {
@@ -642,6 +650,9 @@ ngx_http_script_done(ngx_http_script_compile_t *sc)
 }
 
 
+/* 初始化codes数组,从数组中分配大小为size的内存返回
+ *
+ */
 void *
 ngx_http_script_start_code(ngx_pool_t *pool, ngx_array_t **codes, size_t size)
 {
@@ -679,7 +690,7 @@ ngx_http_script_add_code(ngx_array_t *codes, size_t size, void *code)
     return new;
 }
 
-
+/* 添加常量字符串 */
 static ngx_int_t
 ngx_http_script_add_copy_code(ngx_http_script_compile_t *sc, ngx_str_t *value,
     ngx_uint_t last)
@@ -747,6 +758,7 @@ ngx_http_script_copy_code(ngx_http_script_engine_t *e)
     p = e->pos;
 
     if (!e->skip) {
+        /* 这里应该是将常量字符串拷贝进去 */
         e->pos = ngx_copy(p, e->ip + sizeof(ngx_http_script_copy_code_t),
                           code->len);
     }
@@ -758,7 +770,10 @@ ngx_http_script_copy_code(ngx_http_script_engine_t *e)
                    "http script copy: \"%*s\"", e->pos - p, p);
 }
 
-
+/*
+ * name为变量名称
+ * 添加变量回调代码
+ */
 static ngx_int_t
 ngx_http_script_add_var_code(ngx_http_script_compile_t *sc, ngx_str_t *name)
 {
@@ -777,15 +792,16 @@ ngx_http_script_add_var_code(ngx_http_script_compile_t *sc, ngx_str_t *name)
             return NGX_ERROR;
         }
 
-        *p = index;
+        *p = index; /* 保存索引值 */
     }
-
+    /* 从lengths内存块中开辟sizeof(hgx_http_script_var_code_t)字节,用于存储获取
+    * 变量对应的值的长度的脚本 */
     code = ngx_http_script_add_code(*sc->lengths,
                                     sizeof(ngx_http_script_var_code_t), NULL);
     if (code == NULL) {
         return NGX_ERROR;
     }
-
+    /* 需要执行的代码为ngx_http_script_copy_var_len_code */
     code->code = (ngx_http_script_code_pt) ngx_http_script_copy_var_len_code;
     code->index = (uintptr_t) index;
 
@@ -814,6 +830,7 @@ ngx_http_script_copy_var_len_code(ngx_http_script_engine_t *e)
     e->ip += sizeof(ngx_http_script_var_code_t);
 
     if (e->flushed) {
+        /* 通过索引值获取对应的变量 */
         value = ngx_http_get_indexed_variable(e->request, code->index);
 
     } else {
@@ -1403,7 +1420,7 @@ ngx_http_script_if_code(ngx_http_script_engine_t *e)
             e->request->loc_conf = code->loc_conf;
             ngx_http_update_location_config(e->request);
         }
-
+        /* 如果为真,执行下一条指令 */
         e->ip += sizeof(ngx_http_script_if_code_t);
         return;
     }
@@ -1411,6 +1428,7 @@ ngx_http_script_if_code(ngx_http_script_engine_t *e)
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
                    "http script if: false");
 
+    /* 跳过if为真的指令,执行下一条指令 */
     e->ip += code->next;
 }
 
@@ -1451,12 +1469,12 @@ ngx_http_script_not_equal_code(ngx_http_script_engine_t *e)
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
                    "http script not equal");
 
-    e->sp--;
+    e->sp--; /* 获得前一个压栈的值 */
     val = e->sp;
     res = e->sp - 1;
 
     e->ip += sizeof(uintptr_t);
-
+    /* 比较值是否相等 */
     if (val->len == res->len
         && ngx_strncmp(val->data, res->data, res->len) == 0)
     {
@@ -1505,7 +1523,7 @@ ngx_http_script_file_code(ngx_http_script_engine_t *e)
     of.test_only = 1;
     of.errors = clcf->open_file_cache_errors;
     of.events = clcf->open_file_cache_events;
-
+    /* 打开文件 */
     if (ngx_open_cached_file(clcf->open_file_cache, &path, &of, r->pool)
         != NGX_OK)
     {
@@ -1649,14 +1667,15 @@ ngx_http_script_value_code(ngx_http_script_engine_t *e)
 
     code = (ngx_http_script_value_code_t *) e->ip;
 
-    e->ip += sizeof(ngx_http_script_value_code_t);
+    e->ip += sizeof(ngx_http_script_value_code_t); /* ip指针移动 */
 
+    /* 在堆栈中记录下相应的值 */
     e->sp->len = code->text_len;
     e->sp->data = (u_char *) code->text_data;
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, e->request->connection->log, 0,
                    "http script value: \"%v\"", e->sp);
-
+    /* 栈自动上移 */
     e->sp++;
 }
 
@@ -1715,6 +1734,9 @@ ngx_http_script_var_set_handler_code(ngx_http_script_engine_t *e)
 }
 
 
+/*
+ * $var对应的函数,取得相应的值,然后压栈
+ */
 void
 ngx_http_script_var_code(ngx_http_script_engine_t *e)
 {

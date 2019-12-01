@@ -4,6 +4,7 @@
  * Copyright (C) Nginx, Inc.
  */
 
+/* nginx正则表达式模块 */
 
 #ifndef _NGX_REGEX_H_INCLUDED_
 #define _NGX_REGEX_H_INCLUDED_

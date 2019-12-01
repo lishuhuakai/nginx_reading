@@ -13,13 +13,18 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+/* Nginx脚本引擎 */
 
+/* 脚本引擎上下文 */
 typedef struct {
+    /* 指向待执行的脚本指令, 想象ip寄存器 */
     u_char                     *ip;
+
     u_char                     *pos;
+      /* 变量值构成的栈 */
     ngx_http_variable_value_t  *sp;
 
-    ngx_str_t                   buf;
+    ngx_str_t                   buf; /* 保存结果 */
     ngx_str_t                   line;
 
     /* the start of the rewritten arguments */
@@ -31,22 +36,24 @@ typedef struct {
     unsigned                    is_args:1;
     unsigned                    log:1;
 
-    ngx_int_t                   status;
+    ngx_int_t                   status; /* 运行返回的状态 */
     ngx_http_request_t         *request;
 } ngx_http_script_engine_t;
 
-
+/* 编译所需要的结构体 */
 typedef struct {
     ngx_conf_t                 *cf;
-    ngx_str_t                  *source;
+    ngx_str_t                  *source; /* 配置文件中的原始参数字符串 */
 
-    ngx_array_t               **flushes;
-    ngx_array_t               **lengths;
-    ngx_array_t               **values;
-
+    ngx_array_t               **flushes; /* 保存需要刷新的变量下标,刷新r->variables数组 */
+    ngx_array_t               **lengths; /* 计算变量长度的回调 */
+    ngx_array_t               **values; /* 计算变量值的回调 */
+    /* 变量的个数,两个用途,开始编译前是字符串$个数,编译后是真实的变量的个数。正则表达式捕获设置别名的才会生成变量 */
     ngx_uint_t                  variables;
+    /* 正则表达式匹配获取结果的个数 */
     ngx_uint_t                  ncaptures;
     ngx_uint_t                  captures_mask;
+    /* 常量字符串总长度,例如:A_${host}_B_${remorete_ip} 中A__B_为常量字符串。两个变量host和remote_ip*/
     ngx_uint_t                  size;
 
     void                       *main;
@@ -81,17 +88,17 @@ typedef struct {
     unsigned                    root_prefix:1;
 } ngx_http_compile_complex_value_t;
 
-
+/* 回调函数,负责将配置参数中固定字符串原封不动拷贝到最终字符串 */
 typedef void (*ngx_http_script_code_pt) (ngx_http_script_engine_t *e);
 typedef size_t (*ngx_http_script_len_code_pt) (ngx_http_script_engine_t *e);
 
-
+/* 常量回调 */
 typedef struct {
     ngx_http_script_code_pt     code;
     uintptr_t                   len;
 } ngx_http_script_copy_code_t;
 
-
+/* 负责将配置参数中的变量取值后添加到最终字符串 */
 typedef struct {
     ngx_http_script_code_pt     code;
     uintptr_t                   index;
@@ -194,7 +201,7 @@ typedef struct {
     ngx_array_t                *lengths;
 } ngx_http_script_complex_value_code_t;
 
-
+/* 记录纯字符串值 */
 typedef struct {
     ngx_http_script_code_pt     code;
     uintptr_t                   value;

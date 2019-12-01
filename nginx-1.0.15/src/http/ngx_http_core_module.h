@@ -124,6 +124,7 @@ typedef struct ngx_http_phase_handler_s  ngx_http_phase_handler_t;
 typedef ngx_int_t (*ngx_http_phase_handler_pt)(ngx_http_request_t *r,
     ngx_http_phase_handler_t *ph);
 
+/* 这里代表的是HTTP的处理阶段 */
 struct ngx_http_phase_handler_s {
     /* 在处理到某一个HTTP阶段时,HTTP框架将会在checker方法已实现的前提下首先调用checker
      * 方法来处理请求,而不会直接调用任何阶段中的handler方法,只有在checker方法中才会去调用
@@ -160,13 +161,14 @@ typedef struct {
     /* 存储指针的动态数组,每个指针指向ngx_http_core_srv_conf_t结构体的指针,也就是其成员
      * 类型为ngx_http_core_srv_conf_t** */
     ngx_array_t                servers;         /* ngx_http_core_srv_conf_t */
-
+    /* 非常重要的函数,保存了在当前nginx.conf配置下,一个用户可能经历的所有ngx_http_handler_pt处理方法
+     * 这是所有HTTP模块可以合作处理用户请求的关键 */
     ngx_http_phase_engine_t    phase_engine;
 
     ngx_hash_t                 headers_in_hash;
 
     ngx_hash_t                 variables_hash;
-
+    /* 记录相应的变量值 */
     ngx_array_t                variables;       /* ngx_http_variable_t */
     ngx_uint_t                 ncaptures;
 
@@ -181,7 +183,9 @@ typedef struct {
     ngx_array_t               *ports;
 
     ngx_uint_t                 try_files;       /* unsigned  try_files:1 */
-
+    /* 用于在HTTP框架初始化的时候帮助各个HTTP模块在任意阶段添加HTTP处理方法,它是一个有11个成员的
+     * ngx_http_phase_t数组,其中每一个ngx_http_phase_t结构体对应一个HTTP阶段,在HTTP框架初始化
+     * 完毕之后,运行过程中phases数组是无用的 */
     ngx_http_phase_t           phases[NGX_HTTP_LOG_PHASE + 1];
 } ngx_http_core_main_conf_t;
 

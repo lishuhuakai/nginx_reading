@@ -918,7 +918,7 @@ ngx_http_core_rewrite_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
     rc = ph->handler(r);
 
     if (rc == NGX_DECLINED) {
-        r->phase_handler++;
+        r->phase_handler++; /* 需要执行下一个处理方法 */
         return NGX_AGAIN;
     }
 

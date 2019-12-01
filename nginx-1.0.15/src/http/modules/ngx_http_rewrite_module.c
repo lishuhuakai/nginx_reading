@@ -4,6 +4,7 @@
  * Copyright (C) Nginx, Inc.
  */
 
+/* Nginx的rewrite模块 */
 
 #include <ngx_config.h>
 #include <ngx_core.h>
@@ -133,6 +134,9 @@ ngx_module_t  ngx_http_rewrite_module = {
 };
 
 
+/*
+ * 执行相应的rewrite操作
+ */
 static ngx_int_t
 ngx_http_rewrite_handler(ngx_http_request_t *r)
 {
@@ -157,18 +161,18 @@ ngx_http_rewrite_handler(ngx_http_request_t *r)
     if (rlcf->codes == NULL) {
         return NGX_DECLINED;
     }
-
+    /* e为脚本引擎 */
     e = ngx_pcalloc(r->pool, sizeof(ngx_http_script_engine_t));
     if (e == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
-
+    /* 建立变量值构成的堆栈 */
     e->sp = ngx_pcalloc(r->pool,
                         rlcf->stack_size * sizeof(ngx_http_variable_value_t));
     if (e->sp == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
-
+    /* ip指向第1条指令 */
     e->ip = rlcf->codes->elts;
     e->request = r;
     e->quote = 1;
@@ -177,7 +181,7 @@ ngx_http_rewrite_handler(ngx_http_request_t *r)
 
     while (*(uintptr_t *) e->ip) {
         code = *(ngx_http_script_code_pt *) e->ip;
-        code(e);
+        code(e); /* 执行相应的指令,同时也会移动ip指针 */
     }
 
     if (e->status < NGX_HTTP_BAD_REQUEST) {
@@ -276,6 +280,9 @@ ngx_http_rewrite_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 }
 
 
+/* 配置解析完成之后,需要注册相应的函数
+ *
+ */
 static ngx_int_t
 ngx_http_rewrite_init(ngx_conf_t *cf)
 {
@@ -288,20 +295,24 @@ ngx_http_rewrite_init(ngx_conf_t *cf)
     if (h == NULL) {
         return NGX_ERROR;
     }
-
+    /* server rewrite阶段 */
     *h = ngx_http_rewrite_handler;
 
     h = ngx_array_push(&cmcf->phases[NGX_HTTP_REWRITE_PHASE].handlers);
     if (h == NULL) {
         return NGX_ERROR;
     }
-
+    /* rewrite阶段,将对应的处理函数压入handlers数组 */
     *h = ngx_http_rewrite_handler;
 
     return NGX_OK;
 }
 
-
+/*
+ * 解析rewrite指令
+ * 产生脚本代码块
+ * rewrite regex replacement [flag];
+ */
 static char *
 ngx_http_rewrite(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -327,13 +338,13 @@ ngx_http_rewrite(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     value = cf->args->elts;
 
     ngx_memzero(&rc, sizeof(ngx_regex_compile_t));
-
+    /* 保存正则表达式 */
     rc.pattern = value[1];
     rc.err.len = NGX_MAX_CONF_ERRSTR;
     rc.err.data = errstr;
 
     /* TODO: NGX_REGEX_CASELESS */
-
+    /* 记录下预编译的正则表达式 */
     regex->regex = ngx_http_regex_compile(cf, &rc);
     if (regex->regex == NULL) {
         return NGX_CONF_ERROR;
@@ -362,7 +373,7 @@ ngx_http_rewrite(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         regex->redirect = 1;
         last = 1;
     }
-
+    /* 解析后面的flag参数 */
     if (cf->args->nelts == 4) {
         if (ngx_strcmp(value[3].data, "last") == 0) {
             last = 1;
@@ -394,7 +405,7 @@ ngx_http_rewrite(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     sc.source = &value[2];
     sc.lengths = &regex->lengths;
     sc.values = &lcf->codes;
-    sc.variables = ngx_http_script_variables_count(&value[2]);
+    sc.variables = ngx_http_script_variables_count(&value[2]); /* 变量的个数 */
     sc.main = regex;
     sc.complete_lengths = 1;
     sc.compile_args = !regex->redirect;
@@ -441,6 +452,7 @@ ngx_http_rewrite(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
+/* 解析return指令 */
 static char *
 ngx_http_rewrite_return(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -468,13 +480,16 @@ ngx_http_rewrite_return(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ret->status = ngx_atoi(p, value[1].len);
 
     if (ret->status == (uintptr_t) NGX_ERROR) {
-
+        /*
+         * return code [text];
+         * return code URL;
+         */
         if (cf->args->nelts == 2
             && (ngx_strncmp(p, "http://", sizeof("http://") - 1) == 0
                 || ngx_strncmp(p, "https://", sizeof("https://") - 1) == 0
                 || ngx_strncmp(p, "$scheme", sizeof("$scheme") - 1) == 0))
         {
-            ret->status = NGX_HTTP_MOVED_TEMPORARILY;
+            ret->status = NGX_HTTP_MOVED_TEMPORARILY; /* 302,临时重定向 */
             v = &value[1];
 
         } else {
@@ -483,7 +498,8 @@ ngx_http_rewrite_return(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             return NGX_CONF_ERROR;
         }
 
-    } else {
+    }
+    else { /* return URL */
 
         if (cf->args->nelts == 2) {
             return NGX_CONF_OK;
@@ -524,6 +540,9 @@ ngx_http_rewrite_break(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
+/*
+ * 解析if指令
+ */
 static char *
 ngx_http_rewrite_if(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -591,7 +610,7 @@ ngx_http_rewrite_if(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     if (if_code == NULL) {
         return NGX_CONF_ERROR;
     }
-
+    /* 只需要将这个东西当成是一个汇编代码即可 */
     if_code->code = ngx_http_script_if_code;
 
     elts = lcf->codes->elts;
@@ -655,7 +674,7 @@ ngx_http_rewrite_if_condition(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf)
 
     value = cf->args->elts;
     last = cf->args->nelts - 1;
-
+    /* 第一个value必须是( */
     if (value[1].len < 1 || value[1].data[0] != '(') {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid condition \"%V\"", &value[1]);
@@ -671,12 +690,13 @@ ngx_http_rewrite_if_condition(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf)
         value[1].data++;
     }
 
+    /* 最后一个value必须是) */
     if (value[last].len < 1 || value[last].data[value[last].len - 1] != ')') {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid condition \"%V\"", &value[last]);
         return NGX_CONF_ERROR;
     }
-
+    /* 每一个value代表一个token */
     if (value[last].len == 1) {
         last--;
 
@@ -688,6 +708,7 @@ ngx_http_rewrite_if_condition(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf)
     len = value[cur].len;
     p = value[cur].data;
 
+    /* if块中第一个参数是变量 */
     if (len > 1 && p[0] == '$') {
 
         if (cur != last && cur + 2 != last) {
@@ -695,7 +716,7 @@ ngx_http_rewrite_if_condition(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf)
                                "invalid condition \"%V\"", &value[cur]);
             return NGX_CONF_ERROR;
         }
-
+        /* 这里要执行相应的操作就是取值,压入堆栈 */
         if (ngx_http_rewrite_variable(cf, lcf, &value[cur]) != NGX_CONF_OK) {
             return NGX_CONF_ERROR;
         }
@@ -708,7 +729,7 @@ ngx_http_rewrite_if_condition(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf)
 
         len = value[cur].len;
         p = value[cur].data;
-
+        /* 第2个参数是等于 */
         if (len == 1 && p[0] == '=') {
 
             if (ngx_http_rewrite_value(cf, lcf, &value[last]) != NGX_CONF_OK) {
@@ -725,7 +746,7 @@ ngx_http_rewrite_if_condition(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf)
 
             return NGX_CONF_OK;
         }
-
+        /* 不等于 */
         if (len == 2 && p[0] == '!' && p[1] == '=') {
 
             if (ngx_http_rewrite_value(cf, lcf, &value[last]) != NGX_CONF_OK) {
@@ -737,16 +758,17 @@ ngx_http_rewrite_if_condition(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf)
             if (code == NULL) {
                 return NGX_CONF_ERROR;
             }
-
+            /* 相应的运行code为ngx_http_script_not_equal_code */
             *code = ngx_http_script_not_equal_code;
             return NGX_CONF_OK;
         }
-
+        /* 各种奇怪的不等于,需要和正则表达式做匹配 */
         if ((len == 1 && p[0] == '~')
             || (len == 2 && p[0] == '~' && p[1] == '*')
             || (len == 2 && p[0] == '!' && p[1] == '~')
             || (len == 3 && p[0] == '!' && p[1] == '~' && p[2] == '*'))
         {
+            /* 这里需要执行相应的压栈操作 */
             regex = ngx_http_script_start_code(cf->pool, &lcf->codes,
                                          sizeof(ngx_http_script_regex_code_t));
             if (regex == NULL) {
@@ -761,7 +783,7 @@ ngx_http_rewrite_if_condition(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf)
             rc.options = (p[len - 1] == '*') ? NGX_REGEX_CASELESS : 0;
             rc.err.len = NGX_MAX_CONF_ERRSTR;
             rc.err.data = errstr;
-
+            /* 编译正则表达式 */
             regex->regex = ngx_http_regex_compile(cf, &rc);
             if (regex->regex == NULL) {
                 return NGX_CONF_ERROR;
@@ -803,7 +825,7 @@ ngx_http_rewrite_if_condition(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf)
         if (fop == NULL) {
             return NGX_CONF_ERROR;
         }
-
+        /* 对文件执行相应的操作 */
         fop->code = ngx_http_script_file_code;
 
         if (p[1] == 'f') {
@@ -811,17 +833,17 @@ ngx_http_rewrite_if_condition(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf)
             return NGX_CONF_OK;
         }
 
-        if (p[1] == 'd') {
+        if (p[1] == 'd') { /* 检查文件夹是否存在 */
             fop->op = ngx_http_script_file_dir;
             return NGX_CONF_OK;
         }
 
-        if (p[1] == 'e') {
+        if (p[1] == 'e') { /* 检查文件或者文件夹是否存在 */
             fop->op = ngx_http_script_file_exists;
             return NGX_CONF_OK;
         }
 
-        if (p[1] == 'x') {
+        if (p[1] == 'x') { /* 检查是否为可执行文件 */
             fop->op = ngx_http_script_file_exec;
             return NGX_CONF_OK;
         }
@@ -888,7 +910,7 @@ ngx_http_rewrite_variable(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf,
     return NGX_CONF_OK;
 }
 
-
+/* 处理set命令,编译set脚本 */
 static char *
 ngx_http_rewrite_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -901,7 +923,7 @@ ngx_http_rewrite_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_script_var_handler_code_t  *vhcode;
 
     value = cf->args->elts;
-
+    /* 第一个参数必须是变量 */
     if (value[1].data[0] != '$') {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid variable name \"%V\"", &value[1]);
@@ -910,31 +932,35 @@ ngx_http_rewrite_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     value[1].len--;
     value[1].data++;
-
+    /* 添加变量,去掉了$前缀 */
     v = ngx_http_add_variable(cf, &value[1], NGX_HTTP_VAR_CHANGEABLE);
     if (v == NULL) {
         return NGX_CONF_ERROR;
     }
-
+    /* 将变量索引化处理 */
     index = ngx_http_get_variable_index(cf, &value[1]);
     if (index == NGX_ERROR) {
         return NGX_CONF_ERROR;
     }
-
+    /* 内部变量的get_handler方法是必须实现的,因为采取了惰性求值的方法,即只有读取这个变量值,才会调用get_handler
+     * 计算出这个值,而外部变量是不同的,每一次set都会立刻给变量重新赋值, 同时读取变量值时,因为变量值是被索引化的
+     * 所以可以直接从请求的variables数组中取到set后的值,*/
     if (v->get_handler == NULL
         && ngx_strncasecmp(value[1].data, (u_char *) "http_", 5) != 0
         && ngx_strncasecmp(value[1].data, (u_char *) "sent_http_", 10) != 0
         && ngx_strncasecmp(value[1].data, (u_char *) "upstream_http_", 14) != 0)
     {
+        /* 默认给出一个空值 */
         v->get_handler = ngx_http_rewrite_var;
         v->data = index;
     }
-
+    /* 开始处理set的第2个值参数 */
     if (ngx_http_rewrite_value(cf, lcf, &value[2]) != NGX_CONF_OK) {
         return NGX_CONF_ERROR;
     }
 
     if (v->set_handler) {
+        /* 开始产生代码块 */
         vhcode = ngx_http_script_start_code(cf->pool, &lcf->codes,
                                    sizeof(ngx_http_script_var_handler_code_t));
         if (vhcode == NULL) {
@@ -942,6 +968,7 @@ ngx_http_rewrite_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         }
 
         vhcode->code = ngx_http_script_var_set_handler_code;
+        /* 将赋值的方法记录下来 */
         vhcode->handler = v->set_handler;
         vhcode->data = v->data;
 
@@ -971,7 +998,7 @@ ngx_http_rewrite_value(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf,
     ngx_http_script_complex_value_code_t  *complex;
 
     n = ngx_http_script_variables_count(value);
-
+    /* 如果没有变量 */
     if (n == 0) {
         val = ngx_http_script_start_code(cf->pool, &lcf->codes,
                                          sizeof(ngx_http_script_value_code_t));
@@ -992,7 +1019,7 @@ ngx_http_rewrite_value(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf,
 
         return NGX_CONF_OK;
     }
-
+    /* 如果值中含有其他变量 */
     complex = ngx_http_script_start_code(cf->pool, &lcf->codes,
                                  sizeof(ngx_http_script_complex_value_code_t));
     if (complex == NULL) {

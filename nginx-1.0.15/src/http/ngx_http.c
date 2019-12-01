@@ -445,7 +445,7 @@ ngx_http_init_headers_in_hash(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
     return NGX_OK;
 }
 
-
+/* 这里主要注册一些回调函数,也就是说,每个阶段必要的处理函数 */
 static ngx_int_t
 ngx_http_init_phase_handlers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
 {
@@ -467,7 +467,7 @@ ngx_http_init_phase_handlers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
     for (i = 0; i < NGX_HTTP_LOG_PHASE; i++) {
         n += cmcf->phases[i].handlers.nelts;
     }
-
+    /* ph事实上是一个数组 */
     ph = ngx_pcalloc(cf->pool,
                      n * sizeof(ngx_http_phase_handler_t) + sizeof(void *));
     if (ph == NULL) {
@@ -475,16 +475,16 @@ ngx_http_init_phase_handlers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
     }
 
     cmcf->phase_engine.handlers = ph;
-    n = 0;
+    n = 0; /* n是序号值 */
 
     for (i = 0; i < NGX_HTTP_LOG_PHASE; i++) {
-        h = cmcf->phases[i].handlers.elts;
+        h = cmcf->phases[i].handlers.elts; /* 此阶段处理函数数组的首地址 */
 
         switch (i) {
 
         case NGX_HTTP_SERVER_REWRITE_PHASE:
-            if (cmcf->phase_engine.server_rewrite_index == (ngx_uint_t) -1) {
-                cmcf->phase_engine.server_rewrite_index = n;
+            if (cmcf->phase_engine.server_rewrite_index == (ngx_uint_t) -1) { /* 还未初始化 */
+                cmcf->phase_engine.server_rewrite_index = n; /* 记录下server_rewrite阶段第一个函数的序号 */
             }
             checker = ngx_http_core_rewrite_phase;
 
@@ -495,7 +495,7 @@ ngx_http_init_phase_handlers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
 
             ph->checker = ngx_http_core_find_config_phase;
             n++;
-            ph++;
+            ph++; /* 注意这里,ph事实上是在不断移动的 */
 
             continue;
 
@@ -510,7 +510,7 @@ ngx_http_init_phase_handlers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
         case NGX_HTTP_POST_REWRITE_PHASE:
             if (use_rewrite) {
                 ph->checker = ngx_http_core_post_rewrite_phase;
-                ph->next = find_config_index;
+                ph->next = find_config_index; /*  */
                 n++;
                 ph++;
             }
@@ -549,12 +549,12 @@ ngx_http_init_phase_handlers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
         }
 
         n += cmcf->phases[i].handlers.nelts;
-
+        /* n表示下一个处理阶段中第一个ngx_http_phase_handler_t方法在ph数组中的序号值 */
         for (j = cmcf->phases[i].handlers.nelts - 1; j >=0; j--) {
             ph->checker = checker;
-            ph->handler = h[j];
+            ph->handler = h[j]; /* 这里的 */
             ph->next = n;
-            ph++;
+            ph++; /* ph不断后移 */
         }
     }
 
