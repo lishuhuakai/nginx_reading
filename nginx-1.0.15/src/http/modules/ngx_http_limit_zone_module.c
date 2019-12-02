@@ -4,6 +4,7 @@
  * Copyright (C) Nginx, Inc.
  */
 
+/* 此模块主要用于限制并发连接数 */
 
 #include <ngx_config.h>
 #include <ngx_core.h>
@@ -49,7 +50,7 @@ static char *ngx_http_limit_conn(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 static ngx_int_t ngx_http_limit_zone_init(ngx_conf_t *cf);
 
-
+/* 告警的级别 */
 static ngx_conf_enum_t  ngx_http_limit_conn_log_levels[] = {
     { ngx_string("info"), NGX_LOG_INFO },
     { ngx_string("notice"), NGX_LOG_NOTICE },
@@ -426,7 +427,9 @@ ngx_http_limit_zone_merge_conf(ngx_conf_t *cf, void *parent, void *child)
     return NGX_CONF_OK;
 }
 
-
+/* limit_conn_zone key zone=name:size;
+ *
+ */
 static char *
 ngx_http_limit_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -436,7 +439,7 @@ ngx_http_limit_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_limit_zone_ctx_t  *ctx;
 
     value = cf->args->elts;
-
+    /* 第二个参数必须是一个变量 */
     if (value[2].data[0] != '$') {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid variable name \"%V\"", &value[2]);
@@ -450,14 +453,14 @@ ngx_http_limit_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     if (ctx == NULL) {
         return NGX_CONF_ERROR;
     }
-
+    /* 获取变量的索引值 */
     ctx->index = ngx_http_get_variable_index(cf, &value[2]);
     if (ctx->index == NGX_ERROR) {
         return NGX_CONF_ERROR;
     }
 
     ctx->var = value[2];
-
+    /* 共享内存的大小 */
     n = ngx_parse_size(&value[3]);
 
     if (n == NGX_ERROR) {
@@ -514,7 +517,7 @@ ngx_http_limit_conn(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     if (lzcf->shm_zone == NULL) {
         return NGX_CONF_ERROR;
     }
-
+    /* 获取连接的个数 */
     n = ngx_atoi(value[2].data, value[2].len);
     if (n <= 0) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,

@@ -1422,7 +1422,7 @@ ngx_reopen_files(ngx_cycle_t *cycle, ngx_uid_t user)
 #endif
 }
 
-
+/* 添加共享内存 */
 ngx_shm_zone_t *
 ngx_shared_memory_add(ngx_conf_t *cf, ngx_str_t *name, size_t size, void *tag)
 {
