@@ -934,6 +934,9 @@ ngx_http_core_rewrite_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
 }
 
 
+/*
+ * 此阶段做的事情是匹配location
+ */
 ngx_int_t
 ngx_http_core_find_config_phase(ngx_http_request_t *r,
     ngx_http_phase_handler_t *ph)
@@ -1504,6 +1507,7 @@ ngx_http_update_location_config(ngx_http_request_t *r)
  * NGX_AGAIN    - inclusive match
  * NGX_ERROR    - regex error
  * NGX_DECLINED - no match
+ * 查找匹配的location
  */
 
 static ngx_int_t
@@ -1520,7 +1524,7 @@ ngx_http_core_find_location(ngx_http_request_t *r)
 #endif
 
     pclcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
-
+    /* 先从静态location中查找 */
     rc = ngx_http_core_find_static_location(r, pclcf->static_locations);
 
     if (rc == NGX_AGAIN) {
@@ -1604,7 +1608,7 @@ ngx_http_core_find_static_location(ngx_http_request_t *r,
 
         ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                        "test location: \"%*s\"", node->len, node->name);
-
+        /* 两者的最小值 */
         n = (len <= (size_t) node->len) ? len : node->len;
 
         rc = ngx_filename_cmp(uri, node->name, n);
