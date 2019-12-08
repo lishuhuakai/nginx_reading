@@ -8,8 +8,9 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 
-
+/* 每一页的大小 */
 ngx_uint_t  ngx_pagesize;
+/* 页大小对应的位移变量 */
 ngx_uint_t  ngx_pagesize_shift;
 ngx_uint_t  ngx_cacheline_size;
 

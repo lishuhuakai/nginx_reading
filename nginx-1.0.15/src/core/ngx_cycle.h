@@ -27,9 +27,12 @@ typedef struct ngx_shm_zone_s  ngx_shm_zone_t;
 typedef ngx_int_t (*ngx_shm_zone_init_pt) (ngx_shm_zone_t *zone, void *data);
 
 struct ngx_shm_zone_s {
+    /* 当ngx_shm_zone_init_pt方法回调时,通常在使用slab内存池的代码前需要做一些初始化工作 */
     void                     *data;
     ngx_shm_t                 shm;
+    /* 真正构建好slab共享内存之后,就会回调init指向的方法 */
     ngx_shm_zone_init_pt      init;
+    /* 对应ngx_shared_memory_add的tag参数 */
     void                     *tag;
 };
 
