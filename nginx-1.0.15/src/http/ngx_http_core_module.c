@@ -1344,7 +1344,7 @@ ngx_http_core_try_files_phase(ngx_http_request_t *r,
                 ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
                 return NGX_OK;
             }
-
+            /* 这里拷贝uri */
             p = ngx_copy(r->uri.data, clcf->name.data, alias);
             ngx_memcpy(p, name, path.len);
         }
@@ -1944,7 +1944,7 @@ ngx_http_map_uri_to_path(ngx_http_request_t *r, ngx_str_t *path,
 #else
         reserved += r->uri.len - alias + 1;
 #endif
-
+        /* 这里实际上是获取变量 */
         if (ngx_http_script_run(r, path, clcf->root_lengths->elts, reserved,
                                 clcf->root_values->elts)
             == NULL)
@@ -1970,7 +1970,7 @@ ngx_http_map_uri_to_path(ngx_http_request_t *r, ngx_str_t *path,
         }
 #endif
     }
-
+    /*  拷贝url */
     last = ngx_cpystrn(last, r->uri.data + alias, r->uri.len - alias + 1);
 
     return last;
@@ -1982,7 +1982,7 @@ ngx_http_auth_basic_user(ngx_http_request_t *r)
 {
     ngx_str_t   auth, encoded;
     ngx_uint_t  len;
-
+    /* 如果没有对方传过来的头部中不包含用户名和密码信息的话,可以直接进入下一个阶段 */
     if (r->headers_in.user.len == 0 && r->headers_in.user.data != NULL) {
         return NGX_DECLINED;
     }
@@ -2015,7 +2015,7 @@ ngx_http_auth_basic_user(ngx_http_request_t *r)
         r->headers_in.user.data = (u_char *) "";
         return NGX_DECLINED;
     }
-
+    /* base64解码 */
     auth.len = ngx_base64_decoded_length(encoded.len);
     auth.data = ngx_pnalloc(r->pool, auth.len + 1);
     if (auth.data == NULL) {
@@ -2039,7 +2039,7 @@ ngx_http_auth_basic_user(ngx_http_request_t *r)
         r->headers_in.user.data = (u_char *) "";
         return NGX_DECLINED;
     }
-
+    /* 解析出user和password */
     r->headers_in.user.len = len;
     r->headers_in.user.data = auth.data;
     r->headers_in.passwd.len = auth.len - len - 1;
@@ -3963,7 +3963,7 @@ ngx_http_core_server_name(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     return NGX_CONF_OK;
 }
 
-
+/* 解析alias命令 */
 static char *
 ngx_http_core_root(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -3975,7 +3975,7 @@ ngx_http_core_root(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_script_compile_t   sc;
 
     alias = (cmd->name.len == sizeof("alias") - 1) ? 1 : 0;
-
+    /* 也就是说root和alias命令只能有一个 */
     if (clcf->root.data) {
 
         if ((clcf->alias != 0) == alias) {
@@ -4025,7 +4025,7 @@ ngx_http_core_root(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     clcf->alias = alias ? clcf->name.len : 0;
-    clcf->root = value[1];
+    clcf->root = value[1]; /* 存储root的路径 */
 
     if (!alias && clcf->root.data[clcf->root.len - 1] == '/') {
         clcf->root.len--;
@@ -4047,7 +4047,7 @@ ngx_http_core_root(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         n = 1;
     }
 #endif
-
+    /* 如果root中存在变量 */
     if (n) {
         sc.cf = cf;
         sc.source = &clcf->root;
@@ -4331,6 +4331,9 @@ ngx_http_core_error_page(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
+/* 解析try_files指令
+ * try_files file ... uri;
+ */
 static char *
 ngx_http_core_try_files(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -4362,7 +4365,7 @@ ngx_http_core_try_files(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     for (i = 0; i < cf->args->nelts - 1; i++) {
 
-        tf[i].name = value[i + 1];
+        tf[i].name = value[i + 1]; /* 文件名 */
 
         if (tf[i].name.data[tf[i].name.len - 1] == '/') {
             tf[i].test_dir = 1;

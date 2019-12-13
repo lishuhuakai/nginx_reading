@@ -33,7 +33,9 @@ typedef struct {
 
 
 typedef struct {
+    /* 共享内存块 */
     ngx_shm_zone_t     *shm_zone;
+    /* 限制连接的个数 */
     ngx_uint_t          conn;
     ngx_uint_t          log_level;
 } ngx_http_limit_zone_conf_t;
@@ -175,7 +177,7 @@ ngx_http_limit_zone_handler(ngx_http_request_t *r)
     }
 
     shpool = (ngx_slab_pool_t *) lzcf->shm_zone->shm.addr;
-
+    /* 可以看得到的是,在使用共享内存块之前,确实需要加锁 */
     ngx_shmtx_lock(&shpool->mutex);
 
     node = ctx->rbtree->root;
@@ -201,7 +203,7 @@ ngx_http_limit_zone_handler(ngx_http_request_t *r)
 
         if (rc == 0) {
             if ((ngx_uint_t) lz->conn < lzcf->conn) {
-                lz->conn++;
+                lz->conn++; /* 连接的个数 */
                 goto done;
             }
 
@@ -210,7 +212,7 @@ ngx_http_limit_zone_handler(ngx_http_request_t *r)
             ngx_log_error(lzcf->log_level, r->connection->log, 0,
                           "limiting connections by zone \"%V\"",
                           &lzcf->shm_zone->shm.name);
-
+            /* 如果连接的个数超过了的话,需要关闭连接 */
             return NGX_HTTP_SERVICE_UNAVAILABLE;
         }
 
@@ -220,7 +222,7 @@ ngx_http_limit_zone_handler(ngx_http_request_t *r)
     n = offsetof(ngx_rbtree_node_t, color)
         + offsetof(ngx_http_limit_zone_node_t, data)
         + len;
-
+    /* 如果没有找到节点的话,需要重新分配一个节点 */
     node = ngx_slab_alloc_locked(shpool, n);
     if (node == NULL) {
         ngx_shmtx_unlock(&shpool->mutex);
@@ -231,9 +233,10 @@ ngx_http_limit_zone_handler(ngx_http_request_t *r)
 
     node->key = hash;
     lz->len = (u_char) len;
-    lz->conn = 1;
+    lz->conn = 1; /* 表示仅有1个连接 */
     ngx_memcpy(lz->data, vv->data, len);
 
+    /* 然后将节点插入到共享内存 */
     ngx_rbtree_insert(ctx->rbtree, node);
 
 done:
@@ -242,7 +245,7 @@ done:
                    "limit zone: %08XD %d", node->key, lz->conn);
 
     ngx_shmtx_unlock(&shpool->mutex);
-
+    /* 这里需要注意ngx_http_limit_zone_cleanup函数,当连接结束之后,会将conn的计数减1 */
     cln->handler = ngx_http_limit_zone_cleanup;
     lzcln = cln->data;
 
@@ -325,6 +328,7 @@ ngx_http_limit_zone_cleanup(void *data)
 }
 
 
+/* 共享内存块初始化 */
 static ngx_int_t
 ngx_http_limit_zone_init_zone(ngx_shm_zone_t *shm_zone, void *data)
 {
@@ -338,6 +342,7 @@ ngx_http_limit_zone_init_zone(ngx_shm_zone_t *shm_zone, void *data)
     ctx = shm_zone->data;
 
     if (octx) {
+
         if (ngx_strcmp(ctx->var.data, octx->var.data) != 0) {
             ngx_log_error(NGX_LOG_EMERG, shm_zone->shm.log, 0,
                           "limit_zone \"%V\" uses the \"%V\" variable "
@@ -350,7 +355,7 @@ ngx_http_limit_zone_init_zone(ngx_shm_zone_t *shm_zone, void *data)
 
         return NGX_OK;
     }
-
+    /* shpool指向共享内存块的首部 */
     shpool = (ngx_slab_pool_t *) shm_zone->shm.addr;
 
     if (shm_zone->shm.exists) {
@@ -358,7 +363,7 @@ ngx_http_limit_zone_init_zone(ngx_shm_zone_t *shm_zone, void *data)
 
         return NGX_OK;
     }
-
+    /* 在共享内存块中分配一个红黑树 */
     ctx->rbtree = ngx_slab_alloc(shpool, sizeof(ngx_rbtree_t));
     if (ctx->rbtree == NULL) {
         return NGX_ERROR;
@@ -370,7 +375,7 @@ ngx_http_limit_zone_init_zone(ngx_shm_zone_t *shm_zone, void *data)
     if (sentinel == NULL) {
         return NGX_ERROR;
     }
-
+    /* 红黑树初始化 */
     ngx_rbtree_init(ctx->rbtree, sentinel,
                     ngx_http_limit_zone_rbtree_insert_value);
 
@@ -459,7 +464,7 @@ ngx_http_limit_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-    ctx->var = value[2];
+    ctx->var = value[2]; /* 共享内存的名称 */
     /* 共享内存的大小 */
     n = ngx_parse_size(&value[3]);
 
@@ -475,7 +480,7 @@ ngx_http_limit_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-
+    /* 构建一个共享内存块 */
     shm_zone = ngx_shared_memory_add(cf, &value[1], n,
                                      &ngx_http_limit_zone_module);
     if (shm_zone == NULL) {
@@ -490,7 +495,7 @@ ngx_http_limit_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
                         &value[1], &ctx->var);
         return NGX_CONF_ERROR;
     }
-
+    /* 对应的初始化函数 */
     shm_zone->init = ngx_http_limit_zone_init_zone;
     shm_zone->data = ctx;
 
@@ -498,6 +503,9 @@ ngx_http_limit_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
+/*
+ * limit_conn zone number
+ */
 static char *
 ngx_http_limit_conn(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -549,7 +557,7 @@ ngx_http_limit_zone_init(ngx_conf_t *cf)
     if (h == NULL) {
         return NGX_ERROR;
     }
-
+    /* 一旦连接到来,会回调ngx_http_limit_zone_handler函数进行相关的处理 */
     *h = ngx_http_limit_zone_handler;
 
     return NGX_OK;

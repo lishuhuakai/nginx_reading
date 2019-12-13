@@ -4,7 +4,7 @@
  * Copyright (C) Nginx, Inc.
  */
 
-
+/* 控制某些ip的访问权限 */
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
@@ -119,7 +119,7 @@ ngx_http_access_handler(ngx_http_request_t *r)
 
     switch (r->connection->sockaddr->sa_family) {
 
-    case AF_INET:
+    case AF_INET: /* ipv4地址 */
         if (alcf->rules) {
             sin = (struct sockaddr_in *) r->connection->sockaddr;
             return ngx_http_access_inet(r, alcf, sin->sin_addr.s_addr);
@@ -240,7 +240,9 @@ ngx_http_access_found(ngx_http_request_t *r, ngx_uint_t deny)
     return NGX_OK;
 }
 
-
+/*
+ * allow address | CIDR
+ */
 static char *
 ngx_http_access_rule(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -321,7 +323,7 @@ ngx_http_access_rule(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         if (rule == NULL) {
             return NGX_CONF_ERROR;
         }
-
+        /* 创建一条规则 */
         rule->mask = cidr.u.in.mask;
         rule->addr = cidr.u.in.addr;
         rule->deny = (value[0].data[0] == 'd') ? 1 : 0;

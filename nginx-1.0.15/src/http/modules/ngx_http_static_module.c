@@ -3,7 +3,7 @@
  * Copyright (C) Igor Sysoev
  * Copyright (C) Nginx, Inc.
  */
-
+/* 此模块是静态模块 */
 
 #include <ngx_config.h>
 #include <ngx_core.h>
@@ -73,12 +73,12 @@ ngx_http_static_handler(ngx_http_request_t *r)
      * ngx_http_map_uri_to_path() allocates memory for terminating '\0'
      * so we do not need to reserve memory for '/' for possible redirect
      */
-
+    /* 重定向uri */
     last = ngx_http_map_uri_to_path(r, &path, &root, 0);
     if (last == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
-
+    /* path是文件的路径 */
     path.len = last - path.data;
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, log, 0,
@@ -181,7 +181,7 @@ ngx_http_static_handler(ngx_http_request_t *r)
 
         r->headers_out.location->value.len = len;
         r->headers_out.location->value.data = location;
-
+        /* 返回301,重定向 */
         return NGX_HTTP_MOVED_PERMANENTLY;
     }
 

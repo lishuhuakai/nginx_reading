@@ -4,7 +4,7 @@
  * Copyright (C) Nginx, Inc.
  */
 
-
+/* auth_basic模块,用于简单的认证 */
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
@@ -130,7 +130,7 @@ ngx_http_auth_basic_handler(ngx_http_request_t *r)
 
     rc = ngx_http_auth_basic_user(r);
 
-    if (rc == NGX_DECLINED) {
+    if (rc == NGX_DECLINED) { /* 如果不存在用户名和密码,要求对方输入 */
 
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "no user/password was provided for basic authentication");
@@ -145,7 +145,7 @@ ngx_http_auth_basic_handler(ngx_http_request_t *r)
     if (ngx_http_complex_value(r, &alcf->user_file, &user_file) != NGX_OK) {
         return NGX_ERROR;
     }
-
+    /* 打开配置文件,进行解析 */
     fd = ngx_open_file(user_file.data, NGX_FILE_RDONLY, NGX_FILE_OPEN, 0);
 
     if (fd == NGX_INVALID_FILE) {
@@ -199,7 +199,7 @@ ngx_http_auth_basic_handler(ngx_http_request_t *r)
             case sw_login:
                 if (login == 0) {
 
-                    if (buf[i] == '#' || buf[i] == CR) {
+                    if (buf[i] == '#' || buf[i] == CR) { /* 跳过注释行 */
                         state = sw_skip;
                         break;
                     }
@@ -278,6 +278,7 @@ ngx_http_auth_basic_handler(ngx_http_request_t *r)
                   "user \"%V\" was not found in \"%V\"",
                   &r->headers_in.user, &user_file);
 
+    /* 返回信息给对端,要求其输入用户名和密码 */
     return ngx_http_auth_basic_set_realm(r, &alcf->realm);
 }
 
@@ -291,7 +292,7 @@ ngx_http_auth_basic_crypt_handler(ngx_http_request_t *r,
 
     rc = ngx_crypt(r->pool, r->headers_in.passwd.data, passwd->data,
                    &encrypted);
-
+    /* 用户名和密码 */
     ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "rc: %d user: \"%V\" salt: \"%s\"",
                    rc, &r->headers_in.user, passwd->data);
@@ -307,7 +308,7 @@ ngx_http_auth_basic_crypt_handler(ngx_http_request_t *r,
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "user \"%V\": password mismatch",
                       &r->headers_in.user);
-
+        /* 要求对方输入用户名和密码 */
         return ngx_http_auth_basic_set_realm(r, realm);
     }
 
@@ -448,6 +449,9 @@ ngx_http_auth_basic(ngx_conf_t *cf, void *post, void *data)
 }
 
 
+/*
+ * auth_basic_user_file file;
+ */
 static char *
 ngx_http_auth_basic_user_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -465,7 +469,7 @@ ngx_http_auth_basic_user_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_memzero(&ccv, sizeof(ngx_http_compile_complex_value_t));
 
     ccv.cf = cf;
-    ccv.value = &value[1];
+    ccv.value = &value[1]; /* 配置文件的路径 */
     ccv.complex_value = &alcf->user_file;
     ccv.zero = 1;
     ccv.conf_prefix = 1;

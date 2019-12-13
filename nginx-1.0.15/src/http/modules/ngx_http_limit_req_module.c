@@ -9,6 +9,7 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+/* nginx限制请求数 */
 
 typedef struct {
     u_char                       color;
@@ -182,7 +183,7 @@ ngx_http_limit_req_handler(ngx_http_request_t *r)
     r->main->limit_req_set = 1;
 
     hash = ngx_crc32_short(vv->data, len);
-
+    /* 加锁 */
     ngx_shmtx_lock(&ctx->shpool->mutex);
 
     ngx_http_limit_req_expire(ctx, 1);
@@ -197,7 +198,7 @@ ngx_http_limit_req_handler(ngx_http_request_t *r)
         n = offsetof(ngx_rbtree_node_t, color)
             + offsetof(ngx_http_limit_req_node_t, data)
             + len;
-
+        /* 没有找到就重新分配一个节点 */
         node = ngx_slab_alloc_locked(ctx->shpool, n);
         if (node == NULL) {
 
@@ -474,7 +475,7 @@ ngx_http_limit_req_expire(ngx_http_limit_req_ctx_t *ctx, ngx_uint_t n)
     }
 }
 
-
+/* 共享内存块初始化 */
 static ngx_int_t
 ngx_http_limit_req_init_zone(ngx_shm_zone_t *shm_zone, void *data)
 {
@@ -507,14 +508,14 @@ ngx_http_limit_req_init_zone(ngx_shm_zone_t *shm_zone, void *data)
 
         return NGX_OK;
     }
-
+    /* 分配共享内存 */
     ctx->sh = ngx_slab_alloc(ctx->shpool, sizeof(ngx_http_limit_req_shctx_t));
     if (ctx->sh == NULL) {
         return NGX_ERROR;
     }
 
     ctx->shpool->data = ctx->sh;
-
+    /* 限制连接也使用红黑树 */
     ngx_rbtree_init(&ctx->sh->rbtree, &ctx->sh->sentinel,
                     ngx_http_limit_req_rbtree_insert_value);
 
@@ -579,7 +580,9 @@ ngx_http_limit_req_merge_conf(ngx_conf_t *cf, void *parent, void *child)
     return NGX_CONF_OK;
 }
 
-
+/*
+ * limit_conn_zone key zone=name:size
+ */
 static char *
 ngx_http_limit_req_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -596,13 +599,13 @@ ngx_http_limit_req_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ctx = NULL;
     size = 0;
     rate = 1;
-    scale = 1;
-    name.len = 0;
+    scale = 1; /* scale表述速率 */
+    name.len = 0; /* name表示共享内存块的名称 */
 
     for (i = 1; i < cf->args->nelts; i++) {
 
         if (ngx_strncmp(value[i].data, "zone=", 5) == 0) {
-
+            /* 共享内存的名称 */
             name.data = value[i].data + 5;
 
             p = (u_char *) ngx_strchr(name.data, ':');
@@ -627,7 +630,7 @@ ngx_http_limit_req_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
                                "invalid zone size \"%V\"", &value[i]);
             return NGX_CONF_ERROR;
         }
-
+        /* 解析速率 */
         if (ngx_strncmp(value[i].data, "rate=", 5) == 0) {
 
             len = value[i].len;
@@ -661,7 +664,7 @@ ngx_http_limit_req_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             if (ctx == NULL) {
                 return NGX_CONF_ERROR;
             }
-
+            /* 获取变量 */
             ctx->index = ngx_http_get_variable_index(cf, &value[i]);
             if (ctx->index == NGX_ERROR) {
                 return NGX_CONF_ERROR;
@@ -692,7 +695,7 @@ ngx_http_limit_req_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     ctx->rate = rate * 1000 / scale;
-
+    /* 构建共享内存块 */
     shm_zone = ngx_shared_memory_add(cf, &name, size,
                                      &ngx_http_limit_req_module);
     if (shm_zone == NULL) {
@@ -715,6 +718,9 @@ ngx_http_limit_req_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
+/*
+ * limit_req zone=name [burst=number] [nodelay];
+ */
 static char *
 ngx_http_limit_req(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -735,10 +741,10 @@ ngx_http_limit_req(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     for (i = 1; i < cf->args->nelts; i++) {
 
         if (ngx_strncmp(value[i].data, "zone=", 5) == 0) {
-
+            /* s表示zone的名称 */
             s.len = value[i].len - 5;
             s.data = value[i].data + 5;
-
+            /* 创建共享内存块 */
             lrcf->shm_zone = ngx_shared_memory_add(cf, &s, 0,
                                                    &ngx_http_limit_req_module);
             if (lrcf->shm_zone == NULL) {
@@ -747,7 +753,7 @@ ngx_http_limit_req(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
             continue;
         }
-
+        /* 容量大小 */
         if (ngx_strncmp(value[i].data, "burst=", 6) == 0) {
 
             burst = ngx_atoi(value[i].data + 6, value[i].len - 6);
@@ -802,7 +808,7 @@ ngx_http_limit_req_init(ngx_conf_t *cf)
     if (h == NULL) {
         return NGX_ERROR;
     }
-
+    /* 请求到来的时候,会调用ngx_http_limit_req_handler来进行相关的处理 */
     *h = ngx_http_limit_req_handler;
 
     return NGX_OK;

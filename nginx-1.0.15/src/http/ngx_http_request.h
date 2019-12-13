@@ -337,7 +337,9 @@ struct ngx_http_postponed_request_s {
 typedef struct ngx_http_posted_request_s  ngx_http_posted_request_t;
 
 struct ngx_http_posted_request_s {
+    /* 指向当前处理子请求的ngx_http_request_t结构体 */
     ngx_http_request_t               *request;
+    /* 指向下一个子请求,如果没有,则为NULL指针 */
     ngx_http_posted_request_t        *next;
 };
 
