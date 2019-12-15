@@ -26,7 +26,7 @@ ngx_event_connect_peer(ngx_peer_connection_t *pc)
     if (rc != NGX_OK) {
         return rc;
     }
-
+	/* 调用socket方法建立一个TCP套接字 */
     s = ngx_socket(pc->sockaddr->sa_family, SOCK_STREAM, 0);
 
     ngx_log_debug1(NGX_LOG_DEBUG_EVENT, pc->log, 0, "socket %d", s);
@@ -58,7 +58,7 @@ ngx_event_connect_peer(ngx_peer_connection_t *pc)
             goto failed;
         }
     }
-
+	/* 将套接字设置成非阻塞 */
     if (ngx_nonblocking(s) == -1) {
         ngx_log_error(NGX_LOG_ALERT, pc->log, ngx_socket_errno,
                       ngx_nonblocking_n " failed");
