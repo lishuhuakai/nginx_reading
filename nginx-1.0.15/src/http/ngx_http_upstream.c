@@ -2039,7 +2039,7 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
     ngx_event_pipe_t          *p;
     ngx_connection_t          *c;
     ngx_http_core_loc_conf_t  *clcf;
-
+	/* 向下游客户端发送HTTP包头 */
     rc = ngx_http_send_header(r);
 
     if (rc == NGX_ERROR || rc > NGX_OK || r->post_action) {
@@ -2084,7 +2084,7 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
             u->input_filter = ngx_http_upstream_non_buffered_filter;
             u->input_filter_ctx = r;
         }
-
+		/* 设置读取上游服务器响应的方法为ngx_http_upstream_process_non_buffered_upstream */
         u->read_event_handler = ngx_http_upstream_process_non_buffered_upstream;
         r->write_event_handler =
                              ngx_http_upstream_process_non_buffered_downstream;
@@ -2119,12 +2119,12 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
             u->buffer.last = u->buffer.pos;
 
             u->state->response_length += n;
-
+			/* 处理收到的包体 */
             if (u->input_filter(u->input_filter_ctx, n) == NGX_ERROR) {
                 ngx_http_upstream_finalize_request(r, u, 0);
                 return;
             }
-
+			/* 将本次收到的 包体向下游客户端发送 */
             ngx_http_upstream_process_non_buffered_downstream(r);
 
         } else {
@@ -2318,14 +2318,14 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
     ngx_http_upstream_process_upstream(r, u);
 }
 
-
+/* 处理接收上游服务器的响应 */
 static void
 ngx_http_upstream_process_non_buffered_downstream(ngx_http_request_t *r)
 {
     ngx_event_t          *wev;
     ngx_connection_t     *c;
     ngx_http_upstream_t  *u;
-
+	/* 这个c是Nginx与客户端之间的TCP连接 */
     c = r->connection;
     u = r->upstream;
     wev = c->write;
@@ -2334,7 +2334,7 @@ ngx_http_upstream_process_non_buffered_downstream(ngx_http_request_t *r)
                    "http upstream process non buffered downstream");
 
     c->log->action = "sending to client";
-
+	/* 如果发送超时,同样也要结束请求 */
     if (wev->timedout) {
         c->timedout = 1;
         ngx_connection_error(c, NGX_ETIMEDOUT, "client timed out");
@@ -2351,7 +2351,7 @@ ngx_http_upstream_process_non_buffered_upstream(ngx_http_request_t *r,
     ngx_http_upstream_t *u)
 {
     ngx_connection_t  *c;
-
+	/* 获取Nginx与上游服务器间的TCP连接c */
     c = u->peer.connection;
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, c->log, 0,
@@ -2364,11 +2364,15 @@ ngx_http_upstream_process_non_buffered_upstream(ngx_http_request_t *r,
         ngx_http_upstream_finalize_request(r, u, 0);
         return;
     }
-
+	/* 这个方法才是真正决定以固定内存块作为缓存时如何转发响应的 */
     ngx_http_upstream_process_non_buffered_request(r, 0);
 }
 
 
+/*
+ * do_write为0表示需要读取上游的响应
+ * do_write为1表示需要向下游发送响应
+ */
 static void
 ngx_http_upstream_process_non_buffered_request(ngx_http_request_t *r,
     ngx_uint_t do_write)
@@ -2391,16 +2395,17 @@ ngx_http_upstream_process_non_buffered_request(ngx_http_request_t *r,
 
     for ( ;; ) {
 
-        if (do_write) {
+        if (do_write) { /* 向下游发送响应 */
 
             if (u->out_bufs || u->busy_bufs) {
+				/* ngx_http_output_filter向下游发送out_bufs中的内容 */
                 rc = ngx_http_output_filter(r, u->out_bufs);
 
                 if (rc == NGX_ERROR) {
                     ngx_http_upstream_finalize_request(r, u, 0);
                     return;
                 }
-
+				
                 ngx_chain_update_chains(&u->free_bufs, &u->busy_bufs,
                                         &u->out_bufs, u->output.tag);
             }
@@ -2419,7 +2424,7 @@ ngx_http_upstream_process_non_buffered_request(ngx_http_request_t *r,
                 b->last = b->start;
             }
         }
-
+		/* 获取buffer缓冲区还有多少剩余空间 */
         size = b->end - b->last;
 
         if (size > u->length) {
