@@ -1865,7 +1865,7 @@ ngx_http_send_response(ngx_http_request_t *r, ngx_uint_t status,
     return ngx_http_output_filter(r, &out);
 }
 
-
+/* ngx_http_send_header方法负责构造HTTP响应行,头部,同时会把他们发给客户端 */
 ngx_int_t
 ngx_http_send_header(ngx_http_request_t *r)
 {
@@ -1877,7 +1877,7 @@ ngx_http_send_header(ngx_http_request_t *r)
     return ngx_http_top_header_filter(r);
 }
 
-
+/* ngx_http_output_filter方法用于发送响应包体 */
 ngx_int_t
 ngx_http_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
 {
@@ -1888,7 +1888,7 @@ ngx_http_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, c->log, 0,
                    "http output filter \"%V?%V\"", &r->uri, &r->args);
-	
+	/* 实际调用ngx_http_write_filter方法 */
     rc = ngx_http_top_body_filter(r, in);
 
     if (rc == NGX_ERROR) {

@@ -1921,7 +1921,7 @@ ngx_http_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
         c->error = 1;
         return;
     }
-
+	/* NGX_DECLINED表示请求还需要按照11个HTTP阶段继续处理下去 */
     if (rc == NGX_DECLINED) {
         r->content_handler = NULL;
         r->write_event_handler = ngx_http_core_run_phases;
@@ -2158,10 +2158,10 @@ ngx_http_finalize_connection(ngx_http_request_t *r)
     ngx_http_core_loc_conf_t  *clcf;
 
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
-
+	/* 查看原始请求的引用计数,如果不等于1 ,表示还有多个动作在操作着 */
     if (r->main->count != 1) {
 
-        if (r->discard_body) {
+        if (r->discard_body) { /* 丢弃包体 */
             r->read_event_handler = ngx_http_discarded_request_body_handler;
             ngx_add_timer(r->connection->read, clcf->lingering_timeout);
 
@@ -2246,7 +2246,7 @@ ngx_http_writer(ngx_http_request_t *r)
                    "http writer handler: \"%V?%V\"", &r->uri, &r->args);
 
     clcf = ngx_http_get_module_loc_conf(r->main, ngx_http_core_module);
-
+	/* 检查timeout标志,如果为1,表示超时 */
     if (wev->timedout) {
         if (!wev->delayed) {
             ngx_log_error(NGX_LOG_INFO, c->log, NGX_ETIMEDOUT,
@@ -2256,7 +2256,7 @@ ngx_http_writer(ngx_http_request_t *r)
             ngx_http_finalize_request(r, NGX_HTTP_REQUEST_TIME_OUT);
             return;
         }
-
+		/* delayed标志表示限速导致超时 */
         wev->timedout = 0;
         wev->delayed = 0;
 
@@ -2310,6 +2310,7 @@ ngx_http_writer(ngx_http_request_t *r)
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, wev->log, 0,
                    "http writer done: \"%V?%V\"", &r->uri, &r->args);
 
+	/* 如果这个连接之上再有可写事件,将不做任何处理 */
     r->write_event_handler = ngx_http_request_empty_handler;
 
     ngx_http_finalize_request(r, rc);
@@ -2968,7 +2969,7 @@ ngx_http_close_request(ngx_http_request_t *r, ngx_int_t rc)
     ngx_http_close_connection(c);
 }
 
-
+/* 释放请求对应的ngx_http_request_t结构体 */
 static void
 ngx_http_free_request(ngx_http_request_t *r, ngx_int_t rc)
 {

@@ -2930,7 +2930,7 @@ ngx_http_upstream_cleanup(void *data)
         ngx_resolve_name_done(u->resolved->ctx);
         u->resolved->ctx = NULL;
     }
-
+	/* 最终还是调用ngx_http_upstream_finalize_request方法来结束请求,注意传递的是NGX_DONE参数 */
     ngx_http_upstream_finalize_request(r, u, NGX_DONE);
 }
 
@@ -2943,18 +2943,19 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "finalize http upstream request: %i", rc);
-
+	/* 将cleanup指向的清理资源回调方法置为NULL空指针 */
     if (u->cleanup) {
         *u->cleanup = NULL;
         u->cleanup = NULL;
     }
-
+	/* 释放解析主机域名时分配的资源 */
     if (u->resolved && u->resolved->ctx) {
         ngx_resolve_name_done(u->resolved->ctx);
         u->resolved->ctx = NULL;
     }
 
     if (u->state && u->state->response_sec) {
+		/* 设置当前时间为HTTP响应结束的时间 */
         tp = ngx_timeofday();
         u->state->response_sec = tp->sec - u->state->response_sec;
         u->state->response_msec = tp->msec - u->state->response_msec;
@@ -2963,7 +2964,7 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
             u->state->response_length = u->pipe->read_length;
         }
     }
-
+	/* 表示调用HTTP模块负责实现的finalize_request方法,HTTP模块可能会在upstream */
     u->finalize_request(r, rc);
 
     if (u->peer.free) {

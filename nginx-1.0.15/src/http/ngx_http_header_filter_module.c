@@ -149,7 +149,8 @@ ngx_http_header_out_t  ngx_http_headers_out[] = {
     { ngx_null_string, 0 }
 };
 
-
+/* ngx_http_header_filter方法会根据HTTP规则将header_out中的成员变量序列化为
+ * 字符流,并发送出去 */
 static ngx_int_t
 ngx_http_header_filter(ngx_http_request_t *r)
 {
@@ -169,17 +170,18 @@ ngx_http_header_filter(ngx_http_request_t *r)
     struct sockaddr_in6       *sin6;
 #endif
     u_char                     addr[NGX_SOCKADDR_STRLEN];
-
+	/* 首先检查ngx_http_request_t的header_sent标志位,如果为1,表示这个请求的响应头部已经发送过了
+	 * 不需要再向下执行了 */
     if (r->header_sent) {
         return NGX_OK;
     }
 
     r->header_sent = 1;
-
+	/* 如果当前请求是一个子请求,那么不存在发送HTTP响应头部这个概念 */
     if (r != r->main) {
         return NGX_OK;
     }
-
+	/* HTTP版本太低也不发送 */
     if (r->http_version < NGX_HTTP_VERSION_10) {
         return NGX_OK;
     }
@@ -187,7 +189,7 @@ ngx_http_header_filter(ngx_http_request_t *r)
     if (r->method == NGX_HTTP_HEAD) {
         r->header_only = 1;
     }
-
+		
     if (r->headers_out.last_modified_time != -1) {
         if (r->headers_out.status != NGX_HTTP_OK
             && r->headers_out.status != NGX_HTTP_PARTIAL_CONTENT
@@ -244,7 +246,7 @@ ngx_http_header_filter(ngx_http_request_t *r)
 
             status = status - NGX_HTTP_MOVED_PERMANENTLY + NGX_HTTP_OFF_3XX;
             status_line = &ngx_http_status_lines[status];
-            len += ngx_http_status_lines[status].len;
+            len += ngx_http_status_lines[status].len; /* 统计返回码长度 */
 
         } else if (status >= NGX_HTTP_BAD_REQUEST
                    && status < NGX_HTTP_LAST_4XX)
@@ -263,7 +265,7 @@ ngx_http_header_filter(ngx_http_request_t *r)
             status = status - NGX_HTTP_INTERNAL_SERVER_ERROR
                             + NGX_HTTP_OFF_5XX;
 
-            status_line = &ngx_http_status_lines[status];
+            status_line = &ngx_http_status_lines[status]; /* 状态码 */
             len += ngx_http_status_lines[status].len;
 
         } else {
@@ -278,7 +280,7 @@ ngx_http_header_filter(ngx_http_request_t *r)
         len += clcf->server_tokens ? sizeof(ngx_http_server_full_string) - 1:
                                      sizeof(ngx_http_server_string) - 1;
     }
-
+	/* 日期信息 */
     if (r->headers_out.date == NULL) {
         len += sizeof("Date: Mon, 28 Sep 1970 06:00:00 GMT" CRLF) - 1;
     }
@@ -408,10 +410,10 @@ ngx_http_header_filter(ngx_http_request_t *r)
         }
     }
 #endif
-
+	
     part = &r->headers_out.headers.part;
     header = part->elts;
-
+	/* 统计长度信息 */
     for (i = 0; /* void */; i++) {
 
         if (i >= part->nelts) {
@@ -431,12 +433,12 @@ ngx_http_header_filter(ngx_http_request_t *r)
         len += header[i].key.len + sizeof(": ") - 1 + header[i].value.len
                + sizeof(CRLF) - 1;
     }
-
+	/* 分配内存 */
     b = ngx_create_temp_buf(r->pool, len);
     if (b == NULL) {
         return NGX_ERROR;
     }
-
+	/* 下面开始构造头部信息,填充真正的内容 */
     /* "HTTP/1.x " */
     b->last = ngx_cpymem(b->last, "HTTP/1.1 ", sizeof("HTTP/1.x ") - 1);
 
@@ -609,11 +611,12 @@ ngx_http_header_filter(ngx_http_request_t *r)
 
     out.buf = b;
     out.next = NULL;
-
+	/* 最后调用ngx_http_write_filter方法来进行数据的发送 */
     return ngx_http_write_filter(r, &out);
 }
 
 
+/* 头部过滤方法 */
 static ngx_int_t
 ngx_http_header_filter_init(ngx_conf_t *cf)
 {

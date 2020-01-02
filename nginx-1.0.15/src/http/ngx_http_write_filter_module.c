@@ -55,7 +55,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
     ngx_http_core_loc_conf_t  *clcf;
 
     c = r->connection;
-
+	/* 先检查ngx_connection_t结构体中的error标志位,如果为1表示有错误 */
     if (c->error) {
         return NGX_ERROR;
     }
@@ -98,9 +98,10 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
             return NGX_ERROR;
         }
 #endif
-
+		/* 统计出out缓冲区一共占用了多大的字节数 */
         size += ngx_buf_size(cl->buf);
-
+		/* 检查缓冲区中每个ngx_buf_t块中的3个标志位,flush,recycled,last_buf,如果这3个标志位同时为0
+		 * (即待发送的out链表中没有一个缓冲区表示响应已经结束或需要立刻发送出去)*/
         if (cl->buf->flush || cl->buf->recycled) {
             flush = 1;
         }
@@ -156,7 +157,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
         if (cl->buf->flush || cl->buf->recycled) {
             flush = 1;
         }
-
+		/* last_buf表示是最后一个缓冲区? */
         if (cl->buf->last_buf) {
             last = 1;
         }
@@ -174,11 +175,12 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
      * there are the incoming bufs and the size of all bufs
      * is smaller than "postpone_output" directive
      */
-
+	/* 本次要发送的缓冲区in虽然不为空,但是以上两步中计算出的待发送响应的大小又小于配置文件中
+	 * 的postpone_output参数,那么说明当前的缓冲区是不完整的,而且没有必要立刻发送 */
     if (!last && !flush && in && size < (off_t) clcf->postpone_output) {
         return NGX_OK;
     }
-
+	/* 检查delayed标志,如果为1,表示这一次epoll调度中仍然需要减速,是不可以发送响应的, */
     if (c->write->delayed) {
         c->buffered |= NGX_HTTP_WRITE_BUFFERED;
         return NGX_AGAIN;
@@ -209,11 +211,12 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
         return NGX_ERROR;
     }
-
+	/* limit_rate不为0,表示需要限速,limit_rate表示 */
     if (r->limit_rate) {
+		/* c->sent表示这条连接上面已经发送了的HTTP响应长度,这样计算出的容量 */
         limit = r->limit_rate * (ngx_time() - r->start_sec + 1)
                 - (c->sent - clcf->limit_rate_after);
-
+		/* 速度已经超过,需要进行限速处理 */
         if (limit <= 0) {
             c->write->delayed = 1;
             ngx_add_timer(c->write,
@@ -233,12 +236,13 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
     } else {
         limit = clcf->sendfile_max_chunk;
     }
-
+	/* 已经发送的字节数 */
     sent = c->sent;
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, c->log, 0,
                    "http write filter limit %O", limit);
 
+	/* chain应该是还未发送的内存块的首部 */
     chain = c->send_chain(c, r->out, limit);
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, c->log, 0,
@@ -280,9 +284,10 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
         && c->sent - sent >= limit - (off_t) (2 * ngx_pagesize))
     {
         c->write->delayed = 1;
+		/* 将写事件添加到定时器中去 */
         ngx_add_timer(c->write, 1);
     }
-
+	/* 重置ngx_http_request_t结构体的out缓冲区,将已经发送成功的缓冲区归还给内存池 */
     for (cl = r->out; cl && cl != chain; /* void */) {
         ln = cl;
         cl = cl->next;
